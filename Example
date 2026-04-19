@@ -1,0 +1,658 @@
+
+local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/jonathabejose-alt/Wind-UI-Boreal/refs/heads/main/WindUI%20Boreal"))()
+
+local Window = WindUI:CreateWindow({
+    Title = "WindUI Boreal",
+    Author = "WindUI Boreal Showcase",
+    Folder = "WindUI_Boreal_Example",
+    Icon = "sparkles",
+    IconThemed = true,
+
+    Theme = "Midnight",
+    Size = UDim2.fromOffset(720, 540),
+    Transparent = false,
+    Acrylic = false,
+    SideBarWidth = 210,
+    ScrollBarEnabled = true,
+    HideSearchBar = false,
+    Resizable = true,
+    ModernLayout = true,
+    ModernLayoutMergeElements = false,
+
+    User = {
+        Enabled = true,
+        Anonymous = false,
+        Callback = function()
+            WindUI:Notify({
+                Title = "User Card",
+                Content = "You clicked the user panel.",
+                Icon = "user",
+                Duration = 3
+            })
+        end
+    },
+
+    Topbar = {
+        Height = 52,
+        ButtonsType = "Default"
+    },
+
+    OpenButton = {
+        Enabled = true,
+        Title = "Open UI",
+        Icon = "panel-left-open",
+        Position = UDim2.new(0, 120, 0, 120),
+        Draggable = true,
+        OnlyMobile = false,
+        Scale = 1
+    },
+
+    Watermark = {
+        Enabled = true,
+        Text = "WindUI Boreal Example",
+        Position = "bottom-right",
+        Opacity = 0.5,
+        Size = 14
+    }
+})
+
+local function notify(title, content, icon, duration)
+    WindUI:Notify({
+        Title = title,
+        Content = content,
+        Icon = icon,
+        Duration = duration or 4
+    })
+end
+
+Window:OnOpen(function()
+    notify("Window", "Opened successfully.", "check", 2)
+end)
+
+Window:OnClose(function()
+    notify("Window", "Closed.", "panel-left-close", 2)
+end)
+
+Window:OnDestroy(function()
+    print("Window destroyed")
+end)
+
+Window:BindShortcut("RightShift", function()
+    Window:Toggle()
+end, {
+    Description = "Toggle window",
+    EnabledWhenClosed = true
+})
+
+Window:BindShortcut("F5", function()
+    notify("Shortcut", "Pressed F5.", "keyboard", 2)
+end)
+
+Window:Tag({
+    Title = "v0.0.1",
+    Color = Color3.fromRGB(49, 93, 255),
+    Icon = "badge-check"
+})
+
+Window:SideBarLabel({
+    Title = "Quick Actions",
+    Icon = "zap"
+})
+
+Window:SideBarButton({
+    Title = "Notify",
+    Icon = "bell",
+    Variant = "Secondary",
+    Callback = function()
+        notify("Notification", "Sidebar button pressed.", "bell")
+    end
+})
+
+Window:SideBarButton({
+    Title = "Popup",
+    Icon = "message-square-more",
+    Variant = "Secondary",
+    Callback = function()
+        WindUI:Popup({
+            WindUI = WindUI,
+            Title = "Popup Example",
+            Content = "This popup is created from the sidebar button.",
+            Icon = "sparkles",
+            Buttons = {
+                {
+                    Title = "Cancel",
+                    Variant = "Secondary",
+                    Callback = function()
+                        notify("Popup", "Cancelled.", "x", 2)
+                    end
+                },
+                {
+                    Title = "Confirm",
+                    Icon = "check",
+                    Variant = "Primary",
+                    Callback = function()
+                        notify("Popup", "Confirmed.", "check", 2)
+                    end
+                }
+            }
+        })
+    end
+})
+
+Window:SideBarDivider({})
+
+local MainTab = Window:Tab({
+    Title = "Main",
+    Icon = "layout-dashboard",
+    ShowTabTitle = true,
+    Border = true
+})
+
+local InputsTab = Window:Tab({
+    Title = "Inputs",
+    Icon = "sliders-horizontal",
+    ShowTabTitle = true,
+    Border = true
+})
+
+local OthersTab = Window:Tab({
+    Title = "Others",
+    Icon = "blocks",
+    ShowTabTitle = true,
+    Border = true
+})
+
+Window:SelectTab(MainTab)
+
+MainTab:Paragraph({
+    Title = "Welcome",
+    Desc = "This script demonstrates every public element currently exposed by WindUI Boreal.",
+    Buttons = {
+        {
+            Title = "Notify",
+            Icon = "bell",
+            Callback = function()
+                notify("Paragraph", "Paragraph button clicked.", "bell")
+            end
+        }
+    }
+})
+
+MainTab:Divider({})
+
+local demoProgress = MainTab:Progress({
+    Title = "Loading Progress",
+    Desc = "Controlled by buttons and slider below.",
+    Value = {Min = 0, Max = 100, Default = 35},
+    Prefix = "",
+    Suffix = "%",
+    ShowValue = true,
+    Color = "Slider"
+})
+
+local stats = MainTab:Stats({
+    Title = "Live Stats",
+    Desc = "Runtime-updated statistics block.",
+    Items = {
+        {Key = "Kills", Value = 3},
+        {Key = "Coins", Value = 240},
+        {Key = "Region", Value = "EU"},
+        {Key = "Status", Value = "Ready"},
+    }
+})
+
+MainTab:Button({
+    Title = "Simple Button",
+    Desc = "Runs a plain callback.",
+    Icon = "mouse-pointer-click",
+    Callback = function()
+        notify("Button", "Simple button fired.", "mouse-pointer-click")
+        stats:Update("Status", "Clicked")
+    end
+})
+
+MainTab:ButtonKeybind({
+    Title = "Button + Keybind",
+    Desc = "Click the row or press the bound key.",
+    Icon = "rocket",
+    Value = "G",
+    CanChange = true,
+    Callback = function(trigger)
+        notify("ButtonKeybind", "Triggered with bound key/button: " .. tostring(trigger or "click"), "rocket")
+    end
+})
+
+local godToggle = MainTab:Toggle({
+    Title = "God Mode",
+    Desc = "Regular toggle example.",
+    Type = "Toggle",
+    Value = false,
+    Icon = "shield",
+    Callback = function(state)
+        stats:Update("Status", state and "GodMode ON" or "GodMode OFF")
+        notify("Toggle", "God Mode = " .. tostring(state), state and "shield-check" or "shield-off")
+    end
+})
+
+local checkboxToggle = MainTab:Toggle({
+    Title = "ESP",
+    Desc = "Checkbox style toggle.",
+    Type = "Checkbox",
+    Value = true,
+    Icon = "eye",
+    Callback = function(state)
+        notify("Checkbox", "ESP = " .. tostring(state), "eye")
+    end
+})
+
+MainTab:ToggleKeybind({
+    Title = "Fly Toggle Keybind",
+    Desc = "Toggle state from row click or keyboard.",
+    Type = "Toggle",
+    Value = false,
+    Keybind = "F",
+    Icon = "bird",
+    Callback = function(state)
+        notify("ToggleKeybind", "Fly = " .. tostring(state), "bird")
+    end
+})
+
+local speedSlider = MainTab:Slider({
+    Title = "WalkSpeed",
+    Desc = "Slider with textbox and tooltip.",
+    Value = {Min = 16, Max = 100, Default = 32},
+    Step = 1,
+    IsTooltip = true,
+    IsTextbox = true,
+    Icons = {
+        From = "turtle",
+        To = "rabbit"
+    },
+    Callback = function(value)
+        demoProgress:Set(math.floor(value))
+        stats:Update("Status", "Speed " .. tostring(value))
+    end
+})
+
+local stepper = MainTab:Stepper({
+    Title = "JumpPower Stepper",
+    Desc = "Increment/decrement element.",
+    Value = {Min = 25, Max = 200, Default = 50},
+    Step = 5,
+    Suffix = " JP",
+    Callback = function(value)
+        stats:Update("JumpPower", value)
+    end
+})
+
+MainTab:Keybind({
+    Title = "Action Keybind",
+    Desc = "Press the selected key to run callback.",
+    Value = "K",
+    CanChange = true,
+    Callback = function(keyName)
+        notify("Keybind", "Pressed: " .. tostring(keyName), "keyboard")
+    end
+})
+
+MainTab:Button({
+    Title = "Progress +10",
+    Desc = "Demonstrates programmatic progress control.",
+    Icon = "plus",
+    Callback = function()
+        demoProgress:Add(10)
+    end
+})
+
+MainTab:Button({
+    Title = "Progress -10",
+    Desc = "Decreases progress.",
+    Icon = "minus",
+    Callback = function()
+        demoProgress:Add(-10)
+    end
+})
+
+local textInput = InputsTab:Input({
+    Title = "Input",
+    Desc = "Single-line text input.",
+    Placeholder = "Type something...",
+    Value = "hello",
+    Callback = function(text)
+        stats:Update("LastInput", text)
+    end
+})
+
+local textArea = InputsTab:Input({
+    Title = "Textarea",
+    Desc = "Multi-line input example.",
+    Type = "Textarea",
+    Placeholder = "Write a longer message...",
+    Value = "Line 1\nLine 2",
+    Callback = function(text)
+        print("Textarea changed:", text)
+    end
+})
+
+local mapDropdown = InputsTab:Dropdown({
+    Title = "Map Selection",
+    Desc = "Regular single dropdown.",
+    Values = {
+        {Title = "Forest", Desc = "Green map", Icon = "trees"},
+        {Title = "Desert", Desc = "Dry map", Icon = "sun-medium"},
+        {Title = "Snow", Desc = "Cold map", Icon = "snowflake"},
+    },
+    Value = "Forest",
+    SearchBarEnabled = true,
+    Callback = function(selected)
+        local name = typeof(selected) == "table" and selected.Title or tostring(selected)
+        notify("Dropdown", "Selected: " .. name, "map")
+        stats:Update("Map", name)
+    end
+})
+
+local multiDropdown = InputsTab:Dropdown({
+    Title = "Multi Dropdown",
+    Desc = "Multi-select values.",
+    Multi = true,
+    AllowNone = true,
+    SearchBarEnabled = true,
+    Values = {
+        "Sword",
+        "Bow",
+        "Potion",
+        "Shield",
+        "Boots",
+    },
+    Value = {"Sword", "Potion"},
+    Callback = function(selected)
+        print("MultiDropdown:", selected)
+    end
+})
+
+local playerDropdown = InputsTab:Dropdown({
+    Title = "Players",
+    Desc = "SpecialType = Player",
+    SpecialType = "Player",
+    ExcludeLocalPlayer = true,
+    SearchBarEnabled = true,
+    Callback = function(selected)
+        local name = typeof(selected) == "table" and selected.Title or tostring(selected)
+        notify("Player Dropdown", "Selected: " .. name, "users")
+    end
+})
+
+local segmented = InputsTab:Segmented({
+    Title = "Difficulty",
+    Desc = "Single segmented selector.",
+    Options = {
+        {Title = "Easy", Value = "easy", Icon = "smile"},
+        {Title = "Medium", Value = "medium", Icon = "meh"},
+        {Title = "Hard", Value = "hard", Icon = "flame"},
+    },
+    Value = "medium",
+    Callback = function(value)
+        stats:Update("Difficulty", tostring(value))
+    end
+})
+
+local multiSegmented = InputsTab:Segmented({
+    Title = "Enabled Modules",
+    Desc = "Multi segmented selector.",
+    Multi = true,
+    AllowNone = true,
+    Options = {
+        {Title = "Aim", Value = "aim"},
+        {Title = "ESP", Value = "esp"},
+        {Title = "Radar", Value = "radar"},
+        {Title = "Trigger", Value = "trigger"},
+    },
+    Value = {"esp", "radar"},
+    Callback = function(values)
+        print("Segmented Multi:", values)
+    end
+})
+
+local colorPicker = InputsTab:Colorpicker({
+    Title = "Accent Color",
+    Desc = "Colorpicker with transparency support.",
+    Default = Color3.fromRGB(0, 145, 255),
+    Transparency = 0.15,
+    Callback = function(color, transparency)
+        demoProgress:SetColor(color)
+        print("Color changed:", color, transparency)
+    end
+})
+
+OthersTab:Code({
+    Title = "Loader",
+    Code = [[
+local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/orialdev/WindUI-Boreal/main/WindUI%20Boreal"))()
+]],
+    OnCopy = function()
+        notify("Code", "Loader copied to clipboard.", "copy")
+    end
+})
+
+OthersTab:Divider({})
+
+local VideoElement = OthersTab:Video({
+    Video = "5608321996",
+    Height = 220,
+    Looped = true,
+    Playing = false,
+    Volume = 0.5,
+    Visible = true,
+    Radius = 16,
+    Padding = 6,
+})
+
+OthersTab:Button({
+    Title = "Play",
+    Desc = "Video:Play",
+    Icon = "play",
+    Callback = function()
+        VideoElement:Play()
+    end,
+})
+
+OthersTab:Button({
+    Title = "Pause",
+    Desc = "Video:Pause",
+    Icon = "pause",
+    Callback = function()
+        VideoElement:Pause()
+    end,
+})
+
+OthersTab:Toggle({
+    Title = "Looped",
+    Desc = "Video:SetLooped",
+    Value = true,
+    Callback = function(v)
+        VideoElement:SetLooped(v)
+    end,
+})
+
+OthersTab:Slider({
+    Title = "Volume",
+    Desc = "Video:SetVolume",
+    Value = { Min = 0, Max = 10, Default = 0.5 },
+    Callback = function(v)
+        VideoElement:SetVolume(v)
+    end,
+})
+
+OthersTab:Slider({
+    Title = "Height",
+    Desc = "Video:SetHeight",
+    Value = { Min = 24, Max = 360, Default = 220 },
+    Callback = function(v)
+        VideoElement:SetHeight(math.floor(v + 0.5))
+    end,
+})
+
+OthersTab:Toggle({
+    Title = "Visible",
+    Desc = "Video:SetVisible",
+    Value = true,
+    Callback = function(v)
+        VideoElement:SetVisible(v)
+    end,
+})
+
+local group = OthersTab:Group({})
+group:Button({
+    Title = "Left Group Button",
+    Desc = "Inside Group element.",
+    Icon = "box",
+    Callback = function()
+        notify("Group", "Left button clicked.", "box")
+    end
+})
+group:Toggle({
+    Title = "Right Group Toggle",
+    Desc = "Inside Group element.",
+    Value = false,
+    Icon = "toggle-right",
+    Callback = function(v)
+        notify("Group Toggle", tostring(v), "toggle-right")
+    end
+})
+
+local nestedSection = OthersTab:Section({
+    Title = "Nested Section",
+    Desc = "Expandable section inside a tab.",
+    Icon = "folder-tree",
+    Opened = true,
+    Box = true,
+    BoxBorder = true
+})
+
+nestedSection:Paragraph({
+    Title = "Section Paragraph",
+    Desc = "Sections can contain regular elements."
+})
+
+nestedSection:Button({
+    Title = "Section Button",
+    Icon = "sparkles",
+    Callback = function()
+        notify("Section", "Section button clicked.", "sparkles")
+    end
+})
+
+local multiSection = OthersTab:MultiSection({
+    Title = "MultiSection",
+    Desc = "Tabbed content area inside one section.",
+    Icon = "rows-3",
+    Opened = true,
+    Box = true,
+    BoxBorder = true
+})
+
+local combatTab = multiSection:Tab({
+    Title = "Combat",
+    Icon = "swords",
+    Selected = true
+})
+
+combatTab:Toggle({
+    Title = "Silent Aim",
+    Desc = "Inside MultiSection > Combat",
+    Value = false,
+    Callback = function(v)
+        notify("Combat", "Silent Aim = " .. tostring(v), "crosshair")
+    end
+})
+
+combatTab:Slider({
+    Title = "FOV",
+    Desc = "Combat FOV slider.",
+    Value = {Min = 10, Max = 300, Default = 90},
+    Step = 1,
+    IsTextbox = true,
+    Callback = function(v)
+        print("Combat FOV:", v)
+    end
+})
+
+local visualsTab = multiSection:Tab({
+    Title = "Visuals",
+    Icon = "eye"
+})
+
+visualsTab:Toggle({
+    Title = "Chams",
+    Desc = "Inside MultiSection > Visuals",
+    Value = true,
+    Type = "Checkbox",
+    Callback = function(v)
+        print("Chams:", v)
+    end
+})
+
+visualsTab:Colorpicker({
+    Title = "Glow Color",
+    Desc = "MultiSection colorpicker",
+    Default = Color3.fromRGB(255, 0, 170),
+    Callback = function(color)
+        print("Glow Color:", color)
+    end
+})
+
+local miscTab = multiSection:Tab({
+    Title = "Misc",
+    Icon = "wrench"
+})
+
+miscTab:Input({
+    Title = "Chat Message",
+    Desc = "Inside MultiSection > Misc",
+    Placeholder = "Type message...",
+    Callback = function(text)
+        print("Misc Input:", text)
+    end
+})
+
+miscTab:Dropdown({
+    Title = "Pet",
+    Desc = "Inside MultiSection > Misc",
+    Values = {"Dog", "Cat", "Bird"},
+    Value = "Dog",
+    Callback = function(v)
+        print("Pet:", v)
+    end
+})
+
+task.delay(1, function()
+    notify("Loaded", "Full example loaded successfully.", "check", 3)
+end)
+
+task.delay(2, function()
+    stats:Update("Version", tostring(WindUI.Version or "unknown"))
+    stats:Update("Theme", WindUI:GetCurrentTheme())
+end)
+
+task.delay(3, function()
+    Window:Dialog({
+        Title = "Welcome",
+        Content = "This example uses all currently exposed elements in WindUI Boreal.",
+        Icon = "sparkles",
+        Buttons = {
+            {
+                Title = "Close",
+                Variant = "Secondary",
+                Callback = function() end
+            },
+            {
+                Title = "Notify Me",
+                Icon = "bell",
+                Variant = "Primary",
+                Callback = function()
+                    notify("Dialog", "Thanks for testing the example.", "heart")
+                end
+            }
+        }
+    })
+end)

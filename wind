@@ -19424,16 +19424,14 @@ ap.init()
 end
 
 -- ============================================================================
--- EXTENSIONES PARA TU LIBRERÍA (main.lua features)
+-- EXTENSIONES PARA TU LIBRERÍA (SOLO LAS QUE NO EXISTEN)
 -- ============================================================================
 
--- 1. HStack (emulado con Group)
-function Window:HStack(tab, config)
+function aB:HStack(tab, config)
     config = config or {}
     local group = tab:Group({})
     
     if config.AutoSpace then
-        -- Auto-insert spaces between elements
         local elements = tab.Elements or {}
         local originalAdd = {}
         for k, v in pairs(group) do
@@ -19452,8 +19450,7 @@ function Window:HStack(tab, config)
     return group
 end
 
--- 2. VStack (emulado con Section sin título)
-function Window:VStack(tab, config)
+function aB:VStack(tab, config)
     config = config or {}
     return tab:Section({
         Title = "",
@@ -19462,10 +19459,9 @@ function Window:VStack(tab, config)
     })
 end
 
--- 3. CustomEmptyPage (emulado)
-function Window:CreateEmptyTab(title, icon, emptyConfig)
+function aB:CreateEmptyTab(title, icon, emptyConfig)
     emptyConfig = emptyConfig or {}
-    local tab = Window:Tab({ Title = title, Icon = icon })
+    local tab = aB:Tab({ Title = title, Icon = icon })
     
     tab:Space({ Columns = 1 })
     tab:Paragraph({
@@ -19477,37 +19473,7 @@ function Window:CreateEmptyTab(title, icon, emptyConfig)
     return tab
 end
 
--- 4. ScrollToTheElement
-function Tab:ScrollToTheElement(elementIndex)
-    local container = self.UIElements.ContainerFrame
-    local element = self.Elements[elementIndex]
-    
-    if not container or not element then return self end
-    
-    container.ScrollingEnabled = false
-    
-    local TweenService = game:GetService("TweenService")
-    local targetY = element.ElementFrame.AbsolutePosition.Y 
-                  - container.AbsolutePosition.Y 
-                  - container.UIPadding.PaddingTop.Offset
-    
-    TweenService:Create(container, TweenInfo.new(0.45, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
-        CanvasPosition = Vector2.new(0, targetY)
-    }):Play()
-    
-    task.wait(0.48)
-    
-    if element.Highlight then
-        element:Highlight()
-    end
-    
-    container.ScrollingEnabled = true
-    
-    return self
-end
-
--- 5. SetPanelBackgroundVisible
-function Window:SetPanelBackgroundVisible(visible)
+function aB:SetPanelBackgroundVisible(visible)
     if typeof(visible) == "boolean" then
         self.HidePanelBackground = not visible
         if self.UIElements and self.UIElements.MainBar and self.UIElements.MainBar.Background then
@@ -19517,16 +19483,14 @@ function Window:SetPanelBackgroundVisible(visible)
     return self
 end
 
--- 6. SetPanelBackgroundHidden
-function Window:SetPanelBackgroundHidden(hidden)
+function aB:SetPanelBackgroundHidden(hidden)
     if typeof(hidden) == "boolean" then
         return self:SetPanelBackgroundVisible(not hidden)
     end
     return self
 end
 
--- 7. AutoScale (ya implementado en tu librería, solo verificar)
-function Window:EnableAutoScale(enable)
+function aB:EnableAutoScale(enable)
     self.AutoScale = enable == true
     return self
 end

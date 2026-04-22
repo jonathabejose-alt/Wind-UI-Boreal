@@ -969,6 +969,7 @@ end
 
 local function update(H)
 if not B or not G.CanDraggable then return end
+if not F or not C then return end
 
 local J=H.Position-C
 p.Tween(v,0.02,{Position=UDim2.new(
@@ -984,7 +985,7 @@ if A==nil then
 A=J
 B=true
 C=L.Position
-F=v.Position
+F=v.Position or UDim2.new(0.5,0,0.5,0)
 
 if z and typeof(z)=="function"then
 z(true,A)
@@ -5709,7 +5710,7 @@ aj.Visible=ar.Draggable
 ak.Visible=ar.Draggable
 
 if ao then
-ao:Set(ar.Draggable)
+ao:Set(false)
 end
 end
 
@@ -8027,6 +8028,7 @@ end
 local ax=aj.Tab.UIElements.ContainerFrame
 
 function ak.Set(ay,az,aA)
+if az == nil then return end
 if ar then
 if not ak.IsFocusing and not ah and(not aA or(aA.UserInputType==Enum.UserInputType.MouseButton1 or aA.UserInputType==Enum.UserInputType.Touch))then
 if aA then
@@ -8046,7 +8048,10 @@ ak.UIElements.SliderContainer.TextBox.Text=FormatValue(az)
 if aw then aw.TitleFrame.Text=FormatValue(az)end
 ak.Value.Default=FormatValue(az)
 ap=az
-ad.SafeCallback(ak.Callback,FormatValue(az))
+local fv = FormatValue(az)
+if fv ~= nil then
+    ad.SafeCallback(ak.Callback, fv)
+end
 end
 
 am=ac.RenderStepped:Connect(function()
@@ -8062,7 +8067,10 @@ ak.UIElements.SliderContainer.TextBox.Text=FormatValue(az)
 if aw then aw.TitleFrame.Text=FormatValue(az)end
 ak.Value.Default=FormatValue(az)
 ap=az
-ad.SafeCallback(ak.Callback,FormatValue(az))
+local fv = FormatValue(az)
+if fv ~= nil then
+    ad.SafeCallback(ak.Callback, fv)
+end
 end
 end)
 
@@ -8095,7 +8103,10 @@ ak.UIElements.SliderContainer.TextBox.Text=FormatValue(az)
 if aw then aw.TitleFrame.Text=FormatValue(az)end
 ak.Value.Default=FormatValue(az)
 ap=az
-ad.SafeCallback(ak.Callback,FormatValue(az))
+local fv = FormatValue(az)
+if fv ~= nil then
+    ad.SafeCallback(ak.Callback, fv)
+end
 end
 end
 end

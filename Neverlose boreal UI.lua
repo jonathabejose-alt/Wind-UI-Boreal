@@ -8189,6 +8189,7 @@ Library.KeySystem = function(self, Data)
     end
 
     return KeySystem
+   end
 end
 
 getgenv().Library = Library

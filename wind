@@ -7996,15 +7996,22 @@ Library.KeySystem = function(self, Data)
 
             task.wait(0.6)
 
-            -- Fade out y destruir
-            local Descendants = KeyGui.Instance:GetDescendants()
-            TableInsert(Descendants, KeyGui.Instance)
-            for _, v in Descendants do
-                if v:IsA("Frame") or v:IsA("TextLabel") or v:IsA("TextButton") or v:IsA("TextBox") then
-                    Tween:Create(v, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                        {BackgroundTransparency = 1, TextTransparency = 1, ImageTransparency = 1}, true)
-                end
-            end
+-- Fade out y destruir
+local Descendants = KeyGui.Instance:GetDescendants()
+TableInsert(Descendants, KeyGui.Instance)
+for _, v in Descendants do
+    local ok, _ = pcall(function()
+        if v:IsA("Frame") then
+            Tween:Create(v, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1}, true)
+        elseif v:IsA("TextLabel") or v:IsA("TextButton") then
+            Tween:Create(v, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1, TextTransparency = 1}, true)
+        elseif v:IsA("TextBox") then
+            Tween:Create(v, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1, TextTransparency = 1}, true)
+        elseif v:IsA("ImageLabel") then
+            Tween:Create(v, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1, ImageTransparency = 1}, true)
+        end
+    end)
+end
 
             task.wait(0.5)
             KeyGui:Clean()

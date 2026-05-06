@@ -7662,8 +7662,6 @@ end
 
         return Page
     end
-end
-
 -- ============================================
 -- KEY SYSTEM
 -- ============================================
@@ -8046,6 +8044,7 @@ Library.KeySystem = function(self, Data)
     })
 
     return KeySystem
+  end
 end
 
 getgenv().Library = Library

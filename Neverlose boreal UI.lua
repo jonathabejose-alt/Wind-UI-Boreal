@@ -7663,31 +7663,30 @@ end
         return Page
     end
 -- ============================================
--- KEY SYSTEM
+-- KEY SYSTEM (CON BOTÓN COPY LINK)
 -- ============================================
 Library.KeySystem = function(self, Data)
     Data = Data or {}
 
     local KeySystem = {
         Key         = Data.Key or Data.key or "",
-        Keys        = Data.Keys or Data.keys or {},   -- múltiples keys
+        Keys        = Data.Keys or Data.keys or {},
         Title       = Data.Title or Data.title or "Key System",
         SubTitle    = Data.SubTitle or Data.subtitle or "Enter your key to continue",
         Note        = Data.Note or Data.note or "Get your key at discord.gg/example",
-        SaveKey     = Data.SaveKey ~= false,          -- guarda la key por defecto
+        KeyLink     = Data.KeyLink or Data.keylink or Data.Link or Data.link or "",  -- Enlace para obtener key
+        SaveKey     = Data.SaveKey ~= false,
         FileName    = Data.FileName or Data.filename or "savedkey",
         Callback    = Data.Callback or Data.callback or function() end,
         Verified    = false
     }
 
-    -- Merge Key único en Keys[]
     if KeySystem.Key ~= "" then
-        TableInsert(KeySystem.Keys, KeySystem.Key)
+        table.insert(KeySystem.Keys, KeySystem.Key)
     end
 
     local KeyFilePath = Library.Folders.Directory .. "/" .. KeySystem.FileName .. ".txt"
 
-    -- Función para validar
     local function ValidateKey(Input)
         for _, k in ipairs(KeySystem.Keys) do
             if tostring(Input) == tostring(k) then
@@ -7697,7 +7696,6 @@ Library.KeySystem = function(self, Data)
         return false
     end
 
-    -- Intentar cargar key guardada
     if KeySystem.SaveKey and isfile(KeyFilePath) then
         local Saved = readfile(KeyFilePath)
         if ValidateKey(Saved) then
@@ -7707,19 +7705,18 @@ Library.KeySystem = function(self, Data)
         end
     end
 
-    -- Crear GUI de key
+    -- Crear GUI
     local KeyGui = Instances:Create("ScreenGui", {
         Parent = gethui(),
-        Name = "\0",
+        Name = "KeySystem",
         ZIndexBehavior = Enum.ZIndexBehavior.Global,
         DisplayOrder = 100,
         ResetOnSpawn = false
     })
 
-    -- Overlay oscuro
+    -- Overlay
     local Overlay = Instances:Create("Frame", {
         Parent = KeyGui.Instance,
-        Name = "\0",
         Size = UDim2New(1, 0, 1, 0),
         BackgroundColor3 = FromRGB(0, 0, 0),
         BackgroundTransparency = 0.4,
@@ -7727,47 +7724,42 @@ Library.KeySystem = function(self, Data)
         ZIndex = 1
     })
 
-    -- Ventana principal
-    local Window = Instances:Create("Frame", {
+    -- Ventana principal (más alta para el nuevo botón)
+    local WindowFrame = Instances:Create("Frame", {
         Parent = KeyGui.Instance,
-        Name = "\0",
-        Size = UDim2New(0, 340, 0, 220),
+        Size = UDim2New(0, 360, 0, 270),
         AnchorPoint = Vector2New(0.5, 0.5),
         Position = UDim2New(0.5, 0, 0.5, 0),
         BackgroundColor3 = FromRGB(12, 12, 14),
         BorderSizePixel = 0,
         ZIndex = 2
     })
-    Window:AddToTheme({BackgroundColor3 = "Background"})
+    WindowFrame:AddToTheme({BackgroundColor3 = "Background"})
 
     Instances:Create("UICorner", {
-        Parent = Window.Instance,
+        Parent = WindowFrame.Instance,
         CornerRadius = UDimNew(0, 8)
     })
 
     Instances:Create("UIStroke", {
-        Parent = Window.Instance,
+        Parent = WindowFrame.Instance,
         Color = FromRGB(25, 25, 28),
         Thickness = 1,
         ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     })
 
-    -- Barra superior de acento
+    -- Barra de acento
     local AccentBar = Instances:Create("Frame", {
-        Parent = Window.Instance,
-        Name = "\0",
+        Parent = WindowFrame.Instance,
         Size = UDim2New(1, 0, 0, 2),
-        Position = UDim2New(0, 0, 0, 0),
         BackgroundColor3 = Library.Theme.Accent,
         BorderSizePixel = 0,
         ZIndex = 3
     })
-
     Instances:Create("UICorner", {
         Parent = AccentBar.Instance,
         CornerRadius = UDimNew(0, 8)
     })
-
     Instances:Create("UIGradient", {
         Parent = AccentBar.Instance,
         Color = RGBSequence{
@@ -7783,8 +7775,7 @@ Library.KeySystem = function(self, Data)
 
     -- Título
     Instances:Create("TextLabel", {
-        Parent = Window.Instance,
-        Name = "\0",
+        Parent = WindowFrame.Instance,
         FontFace = Library.Font,
         Text = KeySystem.Title,
         TextColor3 = FromRGB(235, 235, 235),
@@ -7793,14 +7784,12 @@ Library.KeySystem = function(self, Data)
         Position = UDim2New(0, 15, 0, 18),
         BackgroundTransparency = 1,
         TextXAlignment = Enum.TextXAlignment.Left,
-        BorderSizePixel = 0,
         ZIndex = 3
     }):AddToTheme({TextColor3 = "Text"})
 
-    -- SubTítulo
+    -- Subtítulo
     Instances:Create("TextLabel", {
-        Parent = Window.Instance,
-        Name = "\0",
+        Parent = WindowFrame.Instance,
         FontFace = Library.Font,
         Text = KeySystem.SubTitle,
         TextColor3 = FromRGB(235, 235, 235),
@@ -7810,14 +7799,12 @@ Library.KeySystem = function(self, Data)
         Position = UDim2New(0, 15, 0, 40),
         BackgroundTransparency = 1,
         TextXAlignment = Enum.TextXAlignment.Left,
-        BorderSizePixel = 0,
         ZIndex = 3
     }):AddToTheme({TextColor3 = "Text"})
 
     -- Separador
     Instances:Create("Frame", {
-        Parent = Window.Instance,
-        Name = "\0",
+        Parent = WindowFrame.Instance,
         Size = UDim2New(1, -30, 0, 1),
         Position = UDim2New(0, 15, 0, 65),
         BackgroundColor3 = FromRGB(25, 25, 28),
@@ -7825,10 +7812,9 @@ Library.KeySystem = function(self, Data)
         ZIndex = 3
     }):AddToTheme({BackgroundColor3 = "Outline"})
 
-    -- Input de key
+    -- Input
     local InputBG = Instances:Create("Frame", {
-        Parent = Window.Instance,
-        Name = "\0",
+        Parent = WindowFrame.Instance,
         Size = UDim2New(1, -30, 0, 36),
         Position = UDim2New(0, 15, 0, 80),
         BackgroundColor3 = FromRGB(16, 16, 18),
@@ -7836,7 +7822,6 @@ Library.KeySystem = function(self, Data)
         ZIndex = 3
     })
     InputBG:AddToTheme({BackgroundColor3 = "Element"})
-
     Instances:Create("UICorner", {
         Parent = InputBG.Instance,
         CornerRadius = UDimNew(0, 6)
@@ -7844,7 +7829,6 @@ Library.KeySystem = function(self, Data)
 
     local InputBox = Instances:Create("TextBox", {
         Parent = InputBG.Instance,
-        Name = "\0",
         FontFace = Library.Font,
         Text = "",
         PlaceholderText = "Enter key...",
@@ -7856,15 +7840,13 @@ Library.KeySystem = function(self, Data)
         BackgroundTransparency = 1,
         TextXAlignment = Enum.TextXAlignment.Left,
         ClearTextOnFocus = false,
-        BorderSizePixel = 0,
         ZIndex = 4
     })
     InputBox:AddToTheme({TextColor3 = "Text"})
 
-    -- Nota (link discord, etc)
+    -- Nota (con enlace clickeable visualmente)
     local NoteLabel = Instances:Create("TextLabel", {
-        Parent = Window.Instance,
-        Name = "\0",
+        Parent = WindowFrame.Instance,
         FontFace = Library.Font,
         Text = KeySystem.Note,
         TextColor3 = FromRGB(235, 235, 235),
@@ -7874,184 +7856,339 @@ Library.KeySystem = function(self, Data)
         Position = UDim2New(0, 15, 0, 125),
         BackgroundTransparency = 1,
         TextXAlignment = Enum.TextXAlignment.Left,
-        BorderSizePixel = 0,
         ZIndex = 3
     })
 
-    -- Mensaje de error/éxito
-    local StatusLabel = Instances:Create("TextLabel", {
-        Parent = Window.Instance,
-        Name = "\0",
-        FontFace = Library.Font,
-        Text = "",
-        TextColor3 = FromRGB(255, 80, 80),
-        TextSize = 12,
-        Size = UDim2New(1, -30, 0, 15),
-        Position = UDim2New(0, 15, 0, 145),
-        BackgroundTransparency = 1,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        BorderSizePixel = 0,
-        ZIndex = 3
-    })
-
-    -- Botón Confirm
-    local ConfirmBtn = Instances:Create("TextButton", {
-        Parent = Window.Instance,
-        Name = "\0",
-        FontFace = Library.Font,
-        Text = "Confirm",
-        TextColor3 = FromRGB(0, 0, 0),
-        TextSize = 14,
-        Size = UDim2New(0, 140, 0, 32),
-        AnchorPoint = Vector2New(1, 1),
-        Position = UDim2New(1, -15, 1, -15),
-        BackgroundColor3 = Library.Theme.Accent,
-        BorderSizePixel = 0,
-        AutoButtonColor = false,
-        ZIndex = 3
-    })
-
-    Instances:Create("UICorner", {
-        Parent = ConfirmBtn.Instance,
-        CornerRadius = UDimNew(0, 6)
-    })
-
-    Instances:Create("UIGradient", {
-        Parent = ConfirmBtn.Instance,
-        Color = RGBSequence{
-            RGBSequenceKeypoint(0, Library.Theme.Accent),
-            RGBSequenceKeypoint(1, Library.Theme.AccentGradient)
-        }
-    }):AddToTheme({Color = function()
-        return RGBSequence{
-            RGBSequenceKeypoint(0, Library.Theme.Accent),
-            RGBSequenceKeypoint(1, Library.Theme.AccentGradient)
-        }
-    end})
-
-    -- Botón Clipboard (pegar desde portapapeles)
-    local PasteBtn = Instances:Create("TextButton", {
-        Parent = Window.Instance,
-        Name = "\0",
-        FontFace = Library.Font,
-        Text = "Paste",
-        TextColor3 = FromRGB(235, 235, 235),
-        TextTransparency = 0.3,
-        TextSize = 14,
-        Size = UDim2New(0, 100, 0, 32),
-        AnchorPoint = Vector2New(0, 1),
-        Position = UDim2New(0, 15, 1, -15),
-        BackgroundColor3 = FromRGB(16, 16, 18),
-        BorderSizePixel = 0,
-        AutoButtonColor = false,
-        ZIndex = 3
-    })
-    PasteBtn:AddToTheme({BackgroundColor3 = "Element"})
-
-    Instances:Create("UICorner", {
-        Parent = PasteBtn.Instance,
-        CornerRadius = UDimNew(0, 6)
-    })
-
-    -- Hover en Confirm
-    ConfirmBtn:OnHover(function()
-        ConfirmBtn:Tween(TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            Size = UDim2New(0, 145, 0, 34)
+    -- ==================== NUEVO: BOTÓN COPY LINK ====================
+    if KeySystem.KeyLink and KeySystem.KeyLink ~= "" then
+        local CopyLinkBtn = Instances:Create("TextButton", {
+            Parent = WindowFrame.Instance,
+            FontFace = Library.Font,
+            Text = "📋 Copy Key Link",
+            TextColor3 = FromRGB(235, 235, 235),
+            TextSize = 12,
+            Size = UDim2New(1, -30, 0, 28),
+            Position = UDim2New(0, 15, 0, 148),
+            BackgroundColor3 = FromRGB(20, 20, 25),
+            BorderSizePixel = 0,
+            AutoButtonColor = false,
+            ZIndex = 3
         })
-    end)
-    ConfirmBtn:OnHoverLeave(function()
-        ConfirmBtn:Tween(TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            Size = UDim2New(0, 140, 0, 32)
+        CopyLinkBtn:AddToTheme({BackgroundColor3 = "Element"})
+        Instances:Create("UICorner", {
+            Parent = CopyLinkBtn.Instance,
+            CornerRadius = UDimNew(0, 6)
         })
-    end)
 
-    -- Hover en Paste
-    PasteBtn:OnHover(function()
-        PasteBtn:Tween(nil, {TextTransparency = 0})
-    end)
-    PasteBtn:OnHoverLeave(function()
-        PasteBtn:Tween(nil, {TextTransparency = 0.3})
-    end)
+        CopyLinkBtn:OnHover(function()
+            CopyLinkBtn:Tween(nil, {BackgroundColor3 = FromRGB(35, 35, 45)})
+        end)
+        CopyLinkBtn:OnHoverLeave(function()
+            CopyLinkBtn:Tween(nil, {BackgroundColor3 = FromRGB(20, 20, 25)})
+        end)
 
-    -- Lógica Paste
-    PasteBtn:Connect("MouseButton1Down", function()
-        local ok, clip = pcall(function() return getclipboard() end)
-        if ok and clip then
-            InputBox.Instance.Text = clip
-        end
-    end)
+        CopyLinkBtn:Connect("MouseButton1Down", function()
+            setclipboard(KeySystem.KeyLink)
+            -- Mostrar feedback temporal
+            local oldText = CopyLinkBtn.Instance.Text
+            CopyLinkBtn.Instance.Text = "✓ Copied!"
+            task.wait(1)
+            CopyLinkBtn.Instance.Text = oldText
+        end)
 
-    -- Lógica Confirm
-    local function TryConfirm()
-        local Input = InputBox.Instance.Text
+        -- Ajustar posición del mensaje de estado
+        StatusLabel = Instances:Create("TextLabel", {
+            Parent = WindowFrame.Instance,
+            FontFace = Library.Font,
+            Text = "",
+            TextColor3 = FromRGB(255, 80, 80),
+            TextSize = 12,
+            Size = UDim2New(1, -30, 0, 15),
+            Position = UDim2New(0, 15, 0, 185),
+            BackgroundTransparency = 1,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            ZIndex = 3
+        })
 
-        if ValidateKey(Input) then
-            StatusLabel.Instance.TextColor3 = FromRGB(80, 255, 120)
-            StatusLabel.Instance.Text = "✓ Key accepted!"
-            KeySystem.Verified = true
+        -- Ajustar posición del botón Confirm
+        local ConfirmBtn = Instances:Create("TextButton", {
+            Parent = WindowFrame.Instance,
+            FontFace = Library.Font,
+            Text = "Confirm",
+            TextColor3 = FromRGB(0, 0, 0),
+            TextSize = 14,
+            Size = UDim2New(0, 130, 0, 32),
+            AnchorPoint = Vector2New(1, 1),
+            Position = UDim2New(1, -15, 1, -15),
+            BackgroundColor3 = Library.Theme.Accent,
+            BorderSizePixel = 0,
+            AutoButtonColor = false,
+            ZIndex = 3
+        })
+        Instances:Create("UICorner", {
+            Parent = ConfirmBtn.Instance,
+            CornerRadius = UDimNew(0, 6)
+        })
+        Instances:Create("UIGradient", {
+            Parent = ConfirmBtn.Instance,
+            Color = RGBSequence{
+                RGBSequenceKeypoint(0, Library.Theme.Accent),
+                RGBSequenceKeypoint(1, Library.Theme.AccentGradient)
+            }
+        }):AddToTheme({Color = function()
+            return RGBSequence{
+                RGBSequenceKeypoint(0, Library.Theme.Accent),
+                RGBSequenceKeypoint(1, Library.Theme.AccentGradient)
+            }
+        end})
 
-            if KeySystem.SaveKey then
-                writefile(KeyFilePath, Input)
+        -- Botón Paste
+        local PasteBtn = Instances:Create("TextButton", {
+            Parent = WindowFrame.Instance,
+            FontFace = Library.Font,
+            Text = "Paste",
+            TextColor3 = FromRGB(235, 235, 235),
+            TextTransparency = 0.3,
+            TextSize = 14,
+            Size = UDim2New(0, 90, 0, 32),
+            AnchorPoint = Vector2New(0, 1),
+            Position = UDim2New(0, 15, 1, -15),
+            BackgroundColor3 = FromRGB(16, 16, 18),
+            BorderSizePixel = 0,
+            AutoButtonColor = false,
+            ZIndex = 3
+        })
+        PasteBtn:AddToTheme({BackgroundColor3 = "Element"})
+        Instances:Create("UICorner", {
+            Parent = PasteBtn.Instance,
+            CornerRadius = UDimNew(0, 6)
+        })
+
+        -- Hover effects
+        ConfirmBtn:OnHover(function()
+            ConfirmBtn:Tween(TweenInfo.new(0.2), { Size = UDim2New(0, 135, 0, 34) })
+        end)
+        ConfirmBtn:OnHoverLeave(function()
+            ConfirmBtn:Tween(TweenInfo.new(0.2), { Size = UDim2New(0, 130, 0, 32) })
+        end)
+
+        PasteBtn:OnHover(function()
+            PasteBtn:Tween(nil, { TextTransparency = 0 })
+        end)
+        PasteBtn:OnHoverLeave(function()
+            PasteBtn:Tween(nil, { TextTransparency = 0.3 })
+        end)
+
+        -- Paste logic
+        PasteBtn:Connect("MouseButton1Down", function()
+            local ok, clip = pcall(function() return getclipboard() end)
+            if ok and clip then
+                InputBox.Instance.Text = clip
             end
+        end)
 
-            task.wait(0.6)
+        -- Confirm logic
+        local function TryConfirm()
+            local Input = InputBox.Instance.Text
 
--- Fade out y destruir
-local Descendants = KeyGui.Instance:GetDescendants()
-TableInsert(Descendants, KeyGui.Instance)
-for _, v in Descendants do
-    local ok, _ = pcall(function()
-        if v:IsA("Frame") then
-            Tween:Create(v, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1}, true)
-        elseif v:IsA("TextLabel") or v:IsA("TextButton") then
-            Tween:Create(v, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1, TextTransparency = 1}, true)
-        elseif v:IsA("TextBox") then
-            Tween:Create(v, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1, TextTransparency = 1}, true)
-        elseif v:IsA("ImageLabel") then
-            Tween:Create(v, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1, ImageTransparency = 1}, true)
-        end
-    end)
-end
+            if ValidateKey(Input) then
+                StatusLabel.Instance.TextColor3 = FromRGB(80, 255, 120)
+                StatusLabel.Instance.Text = "✓ Key accepted!"
+                KeySystem.Verified = true
 
-            task.wait(0.5)
-            KeyGui:Clean()
-            Library:SafeCall(KeySystem.Callback)
-        else
-            StatusLabel.Instance.TextColor3 = FromRGB(255, 80, 80)
-            StatusLabel.Instance.Text = "✗ Invalid key. Try again."
-
-            -- Shake animation
-            Library:Thread(function()
-                local OrigPos = Window.Instance.Position
-                for i = 1, 4 do
-                    Window:Tween(TweenInfo.new(0.05, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                        Position = UDim2New(OrigPos.X.Scale, OrigPos.X.Offset + (i % 2 == 0 and 8 or -8), OrigPos.Y.Scale, OrigPos.Y.Offset)
-                    })
-                    task.wait(0.05)
+                if KeySystem.SaveKey then
+                    writefile(KeyFilePath, Input)
                 end
-                Window:Tween(TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                    Position = OrigPos
-                })
-            end)
+
+                task.wait(0.6)
+
+                -- Fade out
+                local Descendants = KeyGui.Instance:GetDescendants()
+                table.insert(Descendants, KeyGui.Instance)
+                for _, v in Descendants do
+                    pcall(function()
+                        if v:IsA("Frame") then
+                            Tween:Create(v, TweenInfo.new(0.4), { BackgroundTransparency = 1 }, true)
+                        elseif v:IsA("TextLabel") or v:IsA("TextButton") then
+                            Tween:Create(v, TweenInfo.new(0.4), { BackgroundTransparency = 1, TextTransparency = 1 }, true)
+                        elseif v:IsA("TextBox") then
+                            Tween:Create(v, TweenInfo.new(0.4), { BackgroundTransparency = 1, TextTransparency = 1 }, true)
+                        elseif v:IsA("ImageLabel") then
+                            Tween:Create(v, TweenInfo.new(0.4), { BackgroundTransparency = 1, ImageTransparency = 1 }, true)
+                        end
+                    end)
+                end
+
+                task.wait(0.5)
+                KeyGui:Clean()
+                Library:SafeCall(KeySystem.Callback)
+            else
+                StatusLabel.Instance.TextColor3 = FromRGB(255, 80, 80)
+                StatusLabel.Instance.Text = "✗ Invalid key. Try again."
+
+                -- Shake animation
+                Library:Thread(function()
+                    local OrigPos = WindowFrame.Instance.Position
+                    for i = 1, 4 do
+                        WindowFrame:Tween(TweenInfo.new(0.05), {
+                            Position = UDim2New(OrigPos.X.Scale, OrigPos.X.Offset + (i % 2 == 0 and 8 or -8), OrigPos.Y.Scale, OrigPos.Y.Offset)
+                        })
+                        task.wait(0.05)
+                    end
+                    WindowFrame:Tween(TweenInfo.new(0.1), { Position = OrigPos })
+                end)
+            end
         end
+
+        ConfirmBtn:Connect("MouseButton1Down", TryConfirm)
+        InputBox:Connect("FocusLost", function(Enter) if Enter then TryConfirm() end end)
+
+        -- Animación de entrada
+        WindowFrame.Instance.Position = UDim2New(0.5, 0, 0.6, 0)
+        WindowFrame.Instance.BackgroundTransparency = 1
+        WindowFrame:Tween(TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Position = UDim2New(0.5, 0, 0.5, 0),
+            BackgroundTransparency = 0
+        })
+
+    else
+        -- Si no hay KeyLink, versión simple (sin botón copy)
+        StatusLabel = Instances:Create("TextLabel", {
+            Parent = WindowFrame.Instance,
+            FontFace = Library.Font,
+            Text = "",
+            TextColor3 = FromRGB(255, 80, 80),
+            TextSize = 12,
+            Size = UDim2New(1, -30, 0, 15),
+            Position = UDim2New(0, 15, 0, 148),
+            BackgroundTransparency = 1,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            ZIndex = 3
+        })
+
+        local ConfirmBtn = Instances:Create("TextButton", {
+            Parent = WindowFrame.Instance,
+            FontFace = Library.Font,
+            Text = "Confirm",
+            TextColor3 = FromRGB(0, 0, 0),
+            TextSize = 14,
+            Size = UDim2New(0, 140, 0, 32),
+            AnchorPoint = Vector2New(1, 1),
+            Position = UDim2New(1, -15, 1, -15),
+            BackgroundColor3 = Library.Theme.Accent,
+            BorderSizePixel = 0,
+            AutoButtonColor = false,
+            ZIndex = 3
+        })
+        Instances:Create("UICorner", {
+            Parent = ConfirmBtn.Instance,
+            CornerRadius = UDimNew(0, 6)
+        })
+
+        local PasteBtn = Instances:Create("TextButton", {
+            Parent = WindowFrame.Instance,
+            FontFace = Library.Font,
+            Text = "Paste",
+            TextColor3 = FromRGB(235, 235, 235),
+            TextTransparency = 0.3,
+            TextSize = 14,
+            Size = UDim2New(0, 100, 0, 32),
+            AnchorPoint = Vector2New(0, 1),
+            Position = UDim2New(0, 15, 1, -15),
+            BackgroundColor3 = FromRGB(16, 16, 18),
+            BorderSizePixel = 0,
+            AutoButtonColor = false,
+            ZIndex = 3
+        })
+        PasteBtn:AddToTheme({BackgroundColor3 = "Element"})
+        Instances:Create("UICorner", {
+            Parent = PasteBtn.Instance,
+            CornerRadius = UDimNew(0, 6)
+        })
+
+        ConfirmBtn:OnHover(function()
+            ConfirmBtn:Tween(TweenInfo.new(0.2), { Size = UDim2New(0, 145, 0, 34) })
+        end)
+        ConfirmBtn:OnHoverLeave(function()
+            ConfirmBtn:Tween(TweenInfo.new(0.2), { Size = UDim2New(0, 140, 0, 32) })
+        end)
+
+        PasteBtn:OnHover(function()
+            PasteBtn:Tween(nil, { TextTransparency = 0 })
+        end)
+        PasteBtn:OnHoverLeave(function()
+            PasteBtn:Tween(nil, { TextTransparency = 0.3 })
+        end)
+
+        PasteBtn:Connect("MouseButton1Down", function()
+            local ok, clip = pcall(function() return getclipboard() end)
+            if ok and clip then
+                InputBox.Instance.Text = clip
+            end
+        end)
+
+        local function TryConfirm()
+            local Input = InputBox.Instance.Text
+
+            if ValidateKey(Input) then
+                StatusLabel.Instance.TextColor3 = FromRGB(80, 255, 120)
+                StatusLabel.Instance.Text = "✓ Key accepted!"
+                KeySystem.Verified = true
+
+                if KeySystem.SaveKey then
+                    writefile(KeyFilePath, Input)
+                end
+
+                task.wait(0.6)
+
+                local Descendants = KeyGui.Instance:GetDescendants()
+                table.insert(Descendants, KeyGui.Instance)
+                for _, v in Descendants do
+                    pcall(function()
+                        if v:IsA("Frame") then
+                            Tween:Create(v, TweenInfo.new(0.4), { BackgroundTransparency = 1 }, true)
+                        elseif v:IsA("TextLabel") or v:IsA("TextButton") then
+                            Tween:Create(v, TweenInfo.new(0.4), { BackgroundTransparency = 1, TextTransparency = 1 }, true)
+                        elseif v:IsA("TextBox") then
+                            Tween:Create(v, TweenInfo.new(0.4), { BackgroundTransparency = 1, TextTransparency = 1 }, true)
+                        elseif v:IsA("ImageLabel") then
+                            Tween:Create(v, TweenInfo.new(0.4), { BackgroundTransparency = 1, ImageTransparency = 1 }, true)
+                        end
+                    end)
+                end
+
+                task.wait(0.5)
+                KeyGui:Clean()
+                Library:SafeCall(KeySystem.Callback)
+            else
+                StatusLabel.Instance.TextColor3 = FromRGB(255, 80, 80)
+                StatusLabel.Instance.Text = "✗ Invalid key. Try again."
+
+                Library:Thread(function()
+                    local OrigPos = WindowFrame.Instance.Position
+                    for i = 1, 4 do
+                        WindowFrame:Tween(TweenInfo.new(0.05), {
+                            Position = UDim2New(OrigPos.X.Scale, OrigPos.X.Offset + (i % 2 == 0 and 8 or -8), OrigPos.Y.Scale, OrigPos.Y.Offset)
+                        })
+                        task.wait(0.05)
+                    end
+                    WindowFrame:Tween(TweenInfo.new(0.1), { Position = OrigPos })
+                end)
+            end
+        end
+
+        ConfirmBtn:Connect("MouseButton1Down", TryConfirm)
+        InputBox:Connect("FocusLost", function(Enter) if Enter then TryConfirm() end end)
+
+        WindowFrame.Instance.Position = UDim2New(0.5, 0, 0.6, 0)
+        WindowFrame.Instance.BackgroundTransparency = 1
+        WindowFrame:Tween(TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Position = UDim2New(0.5, 0, 0.5, 0),
+            BackgroundTransparency = 0
+        })
     end
 
-    ConfirmBtn:Connect("MouseButton1Down", TryConfirm)
-
-    InputBox:Connect("FocusLost", function(Enter)
-        if Enter then TryConfirm() end
-    end)
-
-    -- Animación de entrada
-    Window.Instance.Position = UDim2New(0.5, 0, 0.6, 0)
-    Window.Instance.BackgroundTransparency = 1
-    Window:Tween(TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        Position = UDim2New(0.5, 0, 0.5, 0),
-        BackgroundTransparency = 0
-    })
-
     return KeySystem
-  end
 end
 
 getgenv().Library = Library

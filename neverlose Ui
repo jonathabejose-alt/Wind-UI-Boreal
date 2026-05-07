@@ -3447,11 +3447,15 @@ Library.FadeSpeed = 0.1
                 end
             end
 
-            Library:Connect(UserInputService.InputBegan, function(Input)
-                if tostring(Input.KeyCode) == Library.MenuKeybind or tostring(Input.UserInputType) == Library.MenuKeybind then
-                    Window:SetOpen(not Window.IsOpen)
-                end
-            end)
+            local CanToggle = true
+Library:Connect(UserInputService.InputBegan, function(Input)
+    if tostring(Input.KeyCode) == Library.MenuKeybind or tostring(Input.UserInputType) == Library.MenuKeybind then
+        if not CanToggle then return end
+        CanToggle = false
+        Window:SetOpen(not Window.IsOpen)
+        task.delay(0.3, function() CanToggle = true end)
+    end
+end)
 
             Window:SetCenter()
             task.wait()

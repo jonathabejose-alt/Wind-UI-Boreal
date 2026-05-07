@@ -675,44 +675,45 @@ local Library do
 
         Library.Font = SemiBold
     end
--- ==================== OPTIMIZACIÓN ====================
+-- ==================== OPTIMIZACIÓN AGRESIVA ====================
 local HeartbeatCount = 0
-local MAX_HEARTBEATS = 2
+local MAX_HEARTBEATS = 1 -- Solo 1 Heartbeat sin límite
 
 local OldConnect = Library.Connect
 Library.Connect = function(self, Event, Callback, Name)
     if Event == RunService.Heartbeat then
         HeartbeatCount = HeartbeatCount + 1
         if HeartbeatCount > MAX_HEARTBEATS then
+            -- Limitar a solo 5 actualizaciones por segundo
             local throttle = 0
             local fn = Callback
             Callback = function(dt)
                 throttle = throttle + dt
-                if throttle >= 0.1 then
+                if throttle >= 0.2 then -- 5 veces por segundo
                     throttle = 0
                     fn(dt)
                 end
             end
         end
+    elseif Event == RunService.RenderStepped then
+        -- Bloquear RenderStepped completamente (solo Heartbeat)
+        return {Connection = {Disconnect = function() end}}
     end
     return OldConnect(self, Event, Callback, Name)
 end
-    Library.Holder = Instances:Create("ScreenGui", {
-        Parent = gethui(),
-        Name = "\0",
-        ZIndexBehavior = Enum.ZIndexBehavior.Global,
-        DisplayOrder = 2,
-        ResetOnSpawn = false
-    })
 
-    Library.UnusedHolder = Instances:Create("ScreenGui", {
-        Parent = gethui(),
-        Name = "\0",
-        ZIndexBehavior = Enum.ZIndexBehavior.Global,
-        Enabled = false,
-        ResetOnSpawn = false
-    })
+-- Reducir tiempo de Tweens
+Library.Tween.Time = 0.15
+Library.FadeSpeed = 0.1
 
+-- ==================== AQUÍ VA EL HOLDER (FUERA DEL BLOQUE) ====================
+Library.Holder = Instances:Create("ScreenGui", {
+    Parent = gethui(),
+    Name = "\0",
+    ZIndexBehavior = Enum.ZIndexBehavior.Global,
+    DisplayOrder = 2,
+    ResetOnSpawn = false
+})
     Library.NotifHolder  = Instances:Create("Frame", {
         Parent = Library.Holder.Instance,
         Name = "\0",

@@ -675,7 +675,28 @@ local Library do
 
         Library.Font = SemiBold
     end
+-- ==================== OPTIMIZACIÓN ====================
+local HeartbeatCount = 0
+local MAX_HEARTBEATS = 2
 
+local OldConnect = Library.Connect
+Library.Connect = function(self, Event, Callback, Name)
+    if Event == RunService.Heartbeat then
+        HeartbeatCount = HeartbeatCount + 1
+        if HeartbeatCount > MAX_HEARTBEATS then
+            local throttle = 0
+            local fn = Callback
+            Callback = function(dt)
+                throttle = throttle + dt
+                if throttle >= 0.1 then
+                    throttle = 0
+                    fn(dt)
+                end
+            end
+        end
+    end
+    return OldConnect(self, Event, Callback, Name)
+end
     Library.Holder = Instances:Create("ScreenGui", {
         Parent = gethui(),
         Name = "\0",

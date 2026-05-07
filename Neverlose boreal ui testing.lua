@@ -563,7 +563,7 @@ local Library do
                 end
             end)
 
-            Library:Connect(RunService.RenderStepped, function()
+            Library:Connect(RunService.Heartbeat, function()
                 if not Resizing or not CurrentSide then 
                     return 
                 end
@@ -1026,7 +1026,7 @@ local Library do
         -- Добавляем в список на удаление
         table.insert(self.ToClean, DepthOfField.Instance)
 
-        Library:Connect(RunService.RenderStepped, function()
+        Library:Connect(RunService.Heartbeat, function()
             if Window.IsOpen then
                 if Item.Visible then
                     DepthOfField:Tween(nil, {NearIntensity = 1})
@@ -1585,7 +1585,7 @@ local Library do
                     Items["ColorpickerWindow"].Instance.Visible = true
                     Items["ColorpickerWindow"].Instance.Parent = Library.Holder.Instance
                     
-                    RenderStepped = RunService.RenderStepped:Connect(function()
+                    RenderStepped = RunService.Heartbeat:Connect(function(dt)
                         Items["ColorpickerWindow"].Instance.Position = UDim2New(
                             0, 
                             Items["ColorpickerButton"].Instance.AbsolutePosition.X, 
@@ -3082,7 +3082,7 @@ end
                             SettingsItems["Settings"].Instance.Visible = true
                             SettingsItems["Settings"].Instance.Parent = Library.Holder.Instance
                             
-                            RenderStepped = RunService.RenderStepped:Connect(function()
+                            RenderStepped = RunService.Heartbeat:Connect(function(dt)
                                 SettingsItems["Settings"].Instance.Position = UDim2New(0, Items["SettingsIcon"].Instance.AbsolutePosition.X, 0, Items["SettingsIcon"].Instance.AbsolutePosition.Y + Items["SettingsButton"].Instance.AbsoluteSize.Y + 108)
                                 SettingsItems["Settings"].Instance.Size = UDim2New(0, 325, 0, 230)
                             end)
@@ -5144,7 +5144,7 @@ end
                         SettingsItem["Settings"].Instance.Visible = true
                         SettingsItem["Settings"].Instance.Parent = Library.Holder.Instance
                         
-                        RenderStepped = RunService.RenderStepped:Connect(function()
+                        RenderStepped = RunService.Heartbeat:Connect(function(dt)
                             SettingsItem["Settings"].Instance.Position = UDim2New(
                                 0, Items["Toggle"].Instance.AbsolutePosition.X + Items["Toggle"].Instance.AbsoluteSize.X / 1.9 + 15, 
                                 0, Items["Toggle"].Instance.AbsolutePosition.Y + Items["Toggle"].Instance.AbsoluteSize.Y + Size / 1.9)
@@ -5994,7 +5994,7 @@ end
                         end
                     end)
                     
-                    RenderStepped = RunService.RenderStepped:Connect(function()
+                    RenderStepped = RunService.Heartbeat:Connect(function(dt)
                         Items["OptionHolder"].Instance.Position = UDim2New(0, Items["RealDropdown"].Instance.AbsolutePosition.X, 0, Items["RealDropdown"].Instance.AbsolutePosition.Y + Items["RealDropdown"].Instance.AbsoluteSize.Y + 5)
                         Items["OptionHolder"].Instance.Size = UDim2New(0, Items["RealDropdown"].Instance.AbsoluteSize.X, 0, Dropdown.OptionHolderSize)
                     end)
@@ -8321,7 +8321,7 @@ Library.Sections.Segmented = function(self, Data)
     return Segmented
         end
 
--- ==================== CODE (NUEVO) ====================
+-- ==================== CODE (VERSIÓN CORREGIDA - SE VE BIEN) ====================
 Library.Sections.Code = function(self, Data)
     Data = Data or {}
 
@@ -8329,11 +8329,9 @@ Library.Sections.Code = function(self, Data)
         Window = self.Window,
         Page = self.Page,
         Section = self,
-        Name = Data.Title or Data.name or "Code",
-        Flag = Data.Flag or Data.flag or Library:NextFlag(),
+        Title = Data.Title or Data.name or "Code",
         Code = Data.Code or Data.code or "",
         OnCopy = Data.OnCopy or Data.oncopy or function() end,
-        Callback = Data.Callback or Data.callback or function() end,
     }
 
     local Items = {} do
@@ -8347,31 +8345,31 @@ Library.Sections.Code = function(self, Data)
             BackgroundColor3 = FromRGB(255, 255, 255)
         })
 
-        if CodeItem.Name ~= "" then
-            Items["Text"] = Instances:Create("TextLabel", {
-                Parent = Items["Code"].Instance,
-                Name = "\0",
-                FontFace = Library.Font,
-                TextColor3 = FromRGB(240, 240, 240),
-                TextTransparency = 0.3,
-                Text = CodeItem.Name,
-                AutomaticSize = Enum.AutomaticSize.X,
-                Size = UDim2New(0, 0, 0, 15),
-                AnchorPoint = Vector2New(0, 0.5),
-                Position = UDim2New(0, 0, 0.5, 0),
-                BackgroundTransparency = 1,
-                BorderSizePixel = 0,
-                ZIndex = 2,
-                TextSize = 14,
-                BackgroundColor3 = FromRGB(255, 255, 255)
-            }) Items["Text"]:AddToTheme({TextColor3 = "Text"})
-        end
+        -- Título
+        Items["Title"] = Instances:Create("TextLabel", {
+            Parent = Items["Code"].Instance,
+            Name = "\0",
+            FontFace = Library.Font,
+            TextColor3 = FromRGB(240, 240, 240),
+            TextTransparency = 0.3,
+            Text = CodeItem.Title,
+            AutomaticSize = Enum.AutomaticSize.X,
+            Size = UDim2New(0, 0, 0, 15),
+            Position = UDim2New(0, 0, 0, 0),
+            BackgroundTransparency = 1,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            BorderSizePixel = 0,
+            ZIndex = 2,
+            TextSize = 14,
+            BackgroundColor3 = FromRGB(255, 255, 255)
+        }) Items["Title"]:AddToTheme({TextColor3 = "Text"})
 
+        -- Contenedor del código
         Items["CodeBG"] = Instances:Create("Frame", {
             Parent = Items["Code"].Instance,
             Name = "\0",
-            Size = UDim2New(1, -20, 0, 0),
-            Position = UDim2New(0, 10, 0, 25),
+            Size = UDim2New(1, 0, 0, 0),
+            Position = UDim2New(0, 0, 0, 20),
             BackgroundColor3 = FromRGB(16, 16, 18),
             BorderSizePixel = 0,
             AutomaticSize = Enum.AutomaticSize.Y,
@@ -8383,15 +8381,24 @@ Library.Sections.Code = function(self, Data)
             CornerRadius = UDimNew(0, 6)
         })
 
+        Instances:Create("UIPadding", {
+            Parent = Items["CodeBG"].Instance,
+            PaddingTop = UDimNew(0, 10),
+            PaddingBottom = UDimNew(0, 10),
+            PaddingLeft = UDimNew(0, 12),
+            PaddingRight = UDimNew(0, 12)
+        })
+
+        -- Texto del código (monospace)
         Items["CodeText"] = Instances:Create("TextLabel", {
             Parent = Items["CodeBG"].Instance,
             Name = "\0",
             FontFace = Font.new("rbxassetid://12187365364", Enum.FontWeight.Regular, Enum.FontStyle.Normal),
             Text = CodeItem.Code,
-            TextColor3 = FromRGB(200, 200, 200),
+            TextColor3 = FromRGB(180, 220, 180),
             TextSize = 12,
-            Size = UDim2New(1, -20, 0, 0),
-            Position = UDim2New(0, 10, 0, 10),
+            Size = UDim2New(1, -60, 0, 0),
+            Position = UDim2New(0, 0, 0, 0),
             BackgroundTransparency = 1,
             TextXAlignment = Enum.TextXAlignment.Left,
             TextYAlignment = Enum.TextYAlignment.Top,
@@ -8400,6 +8407,7 @@ Library.Sections.Code = function(self, Data)
             ZIndex = 3
         })
 
+        -- Botón Copy
         Items["CopyBtn"] = Instances:Create("TextButton", {
             Parent = Items["CodeBG"].Instance,
             Name = "\0",
@@ -8407,8 +8415,9 @@ Library.Sections.Code = function(self, Data)
             Text = "📋 Copy",
             TextColor3 = FromRGB(240, 240, 240),
             TextSize = 12,
-            Size = UDim2New(0, 60, 0, 24),
-            Position = UDim2New(1, -70, 0, 8),
+            Size = UDim2New(0, 70, 0, 28),
+            Position = UDim2New(1, -8, 0, 8),
+            AnchorPoint = Vector2New(1, 0),
             BackgroundColor3 = Library.Theme.Accent,
             BackgroundTransparency = 0.2,
             BorderSizePixel = 0,
@@ -8416,7 +8425,10 @@ Library.Sections.Code = function(self, Data)
             ZIndex = 4
         })
         Items["CopyBtn"]:AddToTheme({BackgroundColor3 = "Accent"})
-        Instances:Create("UICorner", { Parent = Items["CopyBtn"].Instance, CornerRadius = UDimNew(0, 4) })
+        Instances:Create("UICorner", {
+            Parent = Items["CopyBtn"].Instance,
+            CornerRadius = UDimNew(0, 4)
+        })
 
         Items["CopyBtn"]:OnHover(function()
             Items["CopyBtn"]:Tween(nil, { BackgroundTransparency = 0 })
@@ -8435,7 +8447,6 @@ Library.Sections.Code = function(self, Data)
                 Icon = "107759198829431"
             })
             Library:SafeCall(CodeItem.OnCopy)
-            Library:SafeCall(CodeItem.Callback)
         end)
     end
 
@@ -8446,10 +8457,6 @@ Library.Sections.Code = function(self, Data)
 
     function CodeItem:GetCode()
         return CodeItem.Code
-    end
-
-    Library.SetFlags[CodeItem.Flag] = function(Value)
-        CodeItem:SetCode(Value)
     end
 
     CodeItem.Section.Elements[#CodeItem.Section.Elements + 1] = CodeItem

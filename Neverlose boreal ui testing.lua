@@ -8368,7 +8368,7 @@ Library.Sections.Code = function(self, Data)
     })
     CodeBG:AddToTheme({BackgroundColor3 = "Element"})
     Instances:Create("UICorner", { Parent = CodeBG.Instance, CornerRadius = UDimNew(0, 6) })
-    Instances:Create("UIPadding", { Parent = CodeBG.Instance, PaddingTop = 10, PaddingBottom = 10, PaddingLeft = 12, PaddingRight = 12 })
+    Instances:Create("UIPadding", { Parent = CodeBG.Instance, PaddingTop = UDimNew(0, 10), PaddingBottom = UDimNew(0, 10), PaddingLeft = UDimNew(0, 12), PaddingRight = UDimNew(0, 12) })
 
     -- Texto del código
     local CodeText = Instances:Create("TextLabel", {

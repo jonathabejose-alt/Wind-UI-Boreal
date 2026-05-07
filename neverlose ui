@@ -703,7 +703,7 @@ end
 Library.Tween.Time = 0.15
 Library.FadeSpeed = 0.1
 
-    Library.Holder = Instances:Create("ScreenGui", {
+Library.Holder = Instances:Create("ScreenGui", {
         Parent = gethui(),
         Name = "\0",
         ZIndexBehavior = Enum.ZIndexBehavior.Global,

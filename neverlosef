@@ -1615,7 +1615,7 @@ Library.FadeSpeed = 0.1
                     Items["ColorpickerWindow"].Instance.Visible = true
                     Items["ColorpickerWindow"].Instance.Parent = Library.Holder.Instance
                     
-                    RenderStepped = RunService.RenderStepped:Connect(function()
+                    RenderStepped = Library:Connect(RunService.RenderStepped, function()
                         Items["ColorpickerWindow"].Instance.Position = UDim2New(
                             0, 
                             Items["ColorpickerButton"].Instance.AbsolutePosition.X, 
@@ -3112,7 +3112,7 @@ Library.FadeSpeed = 0.1
                             SettingsItems["Settings"].Instance.Visible = true
                             SettingsItems["Settings"].Instance.Parent = Library.Holder.Instance
                             
-                            RenderStepped = RunService.RenderStepped:Connect(function()
+                            RenderStepped = Library:Connect(RunService.RenderStepped, function()
                                 SettingsItems["Settings"].Instance.Position = UDim2New(0, Items["SettingsIcon"].Instance.AbsolutePosition.X, 0, Items["SettingsIcon"].Instance.AbsolutePosition.Y + Items["SettingsButton"].Instance.AbsoluteSize.Y + 108)
                                 SettingsItems["Settings"].Instance.Size = UDim2New(0, 325, 0, 230)
                             end)
@@ -5178,7 +5178,7 @@ end)
                         SettingsItem["Settings"].Instance.Visible = true
                         SettingsItem["Settings"].Instance.Parent = Library.Holder.Instance
                         
-                        RenderStepped = RunService.RenderStepped:Connect(function()
+                        RenderStepped = Library:Connect(RunService.RenderStepped, function()
                             SettingsItem["Settings"].Instance.Position = UDim2New(
                                 0, Items["Toggle"].Instance.AbsolutePosition.X + Items["Toggle"].Instance.AbsoluteSize.X / 1.9 + 15, 
                                 0, Items["Toggle"].Instance.AbsolutePosition.Y + Items["Toggle"].Instance.AbsoluteSize.Y + Size / 1.9)
@@ -6028,7 +6028,7 @@ end)
                         end
                     end)
                     
-                    RenderStepped = RunService.RenderStepped:Connect(function()
+                    RenderStepped = Library:Connect(RunService.RenderStepped, function()
                         Items["OptionHolder"].Instance.Position = UDim2New(0, Items["RealDropdown"].Instance.AbsolutePosition.X, 0, Items["RealDropdown"].Instance.AbsolutePosition.Y + Items["RealDropdown"].Instance.AbsoluteSize.Y + 5)
                         Items["OptionHolder"].Instance.Size = UDim2New(0, Items["RealDropdown"].Instance.AbsoluteSize.X, 0, Dropdown.OptionHolderSize)
                     end)

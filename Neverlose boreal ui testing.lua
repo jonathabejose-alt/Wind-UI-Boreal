@@ -8321,145 +8321,133 @@ Library.Sections.Segmented = function(self, Data)
     return Segmented
         end
 
--- ==================== CODE (VERSIÓN CORREGIDA - SE VE BIEN) ====================
+-- ==================== CODE (VERSIÓN SIMPLE Y FUNCIONAL) ====================
 Library.Sections.Code = function(self, Data)
     Data = Data or {}
 
+    local Container = Instances:Create("Frame", {
+        Parent = self.Items["Content"].Instance,
+        Name = "\0",
+        BackgroundTransparency = 1,
+        Size = UDim2New(1, 0, 0, 0),
+        AutomaticSize = Enum.AutomaticSize.Y,
+        BorderSizePixel = 0,
+        BackgroundColor3 = FromRGB(255, 255, 255)
+    })
+
+    -- Título
+    local Title = Instances:Create("TextLabel", {
+        Parent = Container.Instance,
+        Name = "\0",
+        FontFace = Library.Font,
+        TextColor3 = FromRGB(240, 240, 240),
+        TextTransparency = 0.3,
+        Text = Data.Title or "Code",
+        AutomaticSize = Enum.AutomaticSize.X,
+        Size = UDim2New(0, 0, 0, 15),
+        Position = UDim2New(0, 0, 0, 0),
+        BackgroundTransparency = 1,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        BorderSizePixel = 0,
+        ZIndex = 2,
+        TextSize = 14,
+        BackgroundColor3 = FromRGB(255, 255, 255)
+    })
+    Title:AddToTheme({TextColor3 = "Text"})
+
+    -- Contenedor del código
+    local CodeBG = Instances:Create("Frame", {
+        Parent = Container.Instance,
+        Name = "\0",
+        Size = UDim2New(1, -20, 0, 0),
+        Position = UDim2New(0, 10, 0, 22),
+        BackgroundColor3 = FromRGB(18, 18, 22),
+        BorderSizePixel = 0,
+        AutomaticSize = Enum.AutomaticSize.Y,
+        ZIndex = 2
+    })
+    CodeBG:AddToTheme({BackgroundColor3 = "Element"})
+    Instances:Create("UICorner", { Parent = CodeBG.Instance, CornerRadius = UDimNew(0, 6) })
+    Instances:Create("UIPadding", { Parent = CodeBG.Instance, PaddingTop = 10, PaddingBottom = 10, PaddingLeft = 12, PaddingRight = 12 })
+
+    -- Texto del código
+    local CodeText = Instances:Create("TextLabel", {
+        Parent = CodeBG.Instance,
+        Name = "\0",
+        FontFace = Font.new("rbxassetid://12187365364", Enum.FontWeight.Regular, Enum.FontStyle.Normal),
+        Text = Data.Code or "",
+        TextColor3 = FromRGB(180, 220, 180),
+        TextSize = 12,
+        Size = UDim2New(1, -70, 0, 0),
+        BackgroundTransparency = 1,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextYAlignment = Enum.TextYAlignment.Top,
+        TextWrapped = true,
+        AutomaticSize = Enum.AutomaticSize.Y,
+        ZIndex = 3
+    })
+
+    -- Botón Copy
+    local CopyBtn = Instances:Create("TextButton", {
+        Parent = CodeBG.Instance,
+        Name = "\0",
+        FontFace = Library.Font,
+        Text = "Copy",
+        TextColor3 = FromRGB(240, 240, 240),
+        TextSize = 12,
+        Size = UDim2New(0, 55, 0, 28),
+        Position = UDim2New(1, -10, 0, 10),
+        AnchorPoint = Vector2New(1, 0),
+        BackgroundColor3 = Library.Theme.Accent,
+        BackgroundTransparency = 0.15,
+        BorderSizePixel = 0,
+        AutoButtonColor = false,
+        ZIndex = 4
+    })
+    CopyBtn:AddToTheme({BackgroundColor3 = "Accent"})
+    Instances:Create("UICorner", { Parent = CopyBtn.Instance, CornerRadius = UDimNew(0, 4) })
+
+    CopyBtn:OnHover(function()
+        CopyBtn:Tween(nil, { BackgroundTransparency = 0 })
+    end)
+
+    CopyBtn:OnHoverLeave(function()
+        CopyBtn:Tween(nil, { BackgroundTransparency = 0.15 })
+    end)
+
+    CopyBtn:Connect("MouseButton1Down", function()
+        setclipboard(Data.Code or "")
+        Library:Notification({
+            Title = "Copied",
+            Description = "Code copied!",
+            Duration = 2,
+            Icon = "107759198829431"
+        })
+        if Data.OnCopy then Data.OnCopy() end
+    end)
+
     local CodeItem = {
-        Window = self.Window,
-        Page = self.Page,
-        Section = self,
-        Title = Data.Title or Data.name or "Code",
-        Code = Data.Code or Data.code or "",
-        OnCopy = Data.OnCopy or Data.oncopy or function() end,
+        Title = Title,
+        CodeBG = CodeBG,
+        CodeText = CodeText,
+        CopyBtn = CopyBtn
     }
 
-    local Items = {} do
-        Items["Code"] = Instances:Create("Frame", {
-            Parent = CodeItem.Section.Items["Content"].Instance,
-            Name = "\0",
-            BackgroundTransparency = 1,
-            Size = UDim2New(1, 0, 0, 0),
-            AutomaticSize = Enum.AutomaticSize.Y,
-            BorderSizePixel = 0,
-            BackgroundColor3 = FromRGB(255, 255, 255)
-        })
-
-        -- Título
-        Items["Title"] = Instances:Create("TextLabel", {
-            Parent = Items["Code"].Instance,
-            Name = "\0",
-            FontFace = Library.Font,
-            TextColor3 = FromRGB(240, 240, 240),
-            TextTransparency = 0.3,
-            Text = CodeItem.Title,
-            AutomaticSize = Enum.AutomaticSize.X,
-            Size = UDim2New(0, 0, 0, 15),
-            Position = UDim2New(0, 0, 0, 0),
-            BackgroundTransparency = 1,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            BorderSizePixel = 0,
-            ZIndex = 2,
-            TextSize = 14,
-            BackgroundColor3 = FromRGB(255, 255, 255)
-        }) Items["Title"]:AddToTheme({TextColor3 = "Text"})
-
-        -- Contenedor del código
-        Items["CodeBG"] = Instances:Create("Frame", {
-            Parent = Items["Code"].Instance,
-            Name = "\0",
-            Size = UDim2New(1, 0, 0, 0),
-            Position = UDim2New(0, 0, 0, 20),
-            BackgroundColor3 = FromRGB(16, 16, 18),
-            BorderSizePixel = 0,
-            AutomaticSize = Enum.AutomaticSize.Y,
-            ZIndex = 2
-        }) Items["CodeBG"]:AddToTheme({BackgroundColor3 = "Element"})
-
-        Instances:Create("UICorner", {
-            Parent = Items["CodeBG"].Instance,
-            CornerRadius = UDimNew(0, 6)
-        })
-
-        Instances:Create("UIPadding", {
-            Parent = Items["CodeBG"].Instance,
-            PaddingTop = UDimNew(0, 10),
-            PaddingBottom = UDimNew(0, 10),
-            PaddingLeft = UDimNew(0, 12),
-            PaddingRight = UDimNew(0, 12)
-        })
-
-        -- Texto del código (monospace)
-        Items["CodeText"] = Instances:Create("TextLabel", {
-            Parent = Items["CodeBG"].Instance,
-            Name = "\0",
-            FontFace = Font.new("rbxassetid://12187365364", Enum.FontWeight.Regular, Enum.FontStyle.Normal),
-            Text = CodeItem.Code,
-            TextColor3 = FromRGB(180, 220, 180),
-            TextSize = 12,
-            Size = UDim2New(1, -60, 0, 0),
-            Position = UDim2New(0, 0, 0, 0),
-            BackgroundTransparency = 1,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            TextYAlignment = Enum.TextYAlignment.Top,
-            TextWrapped = true,
-            AutomaticSize = Enum.AutomaticSize.Y,
-            ZIndex = 3
-        })
-
-        -- Botón Copy
-        Items["CopyBtn"] = Instances:Create("TextButton", {
-            Parent = Items["CodeBG"].Instance,
-            Name = "\0",
-            FontFace = Library.Font,
-            Text = "📋 Copy",
-            TextColor3 = FromRGB(240, 240, 240),
-            TextSize = 12,
-            Size = UDim2New(0, 70, 0, 28),
-            Position = UDim2New(1, -8, 0, 8),
-            AnchorPoint = Vector2New(1, 0),
-            BackgroundColor3 = Library.Theme.Accent,
-            BackgroundTransparency = 0.2,
-            BorderSizePixel = 0,
-            AutoButtonColor = false,
-            ZIndex = 4
-        })
-        Items["CopyBtn"]:AddToTheme({BackgroundColor3 = "Accent"})
-        Instances:Create("UICorner", {
-            Parent = Items["CopyBtn"].Instance,
-            CornerRadius = UDimNew(0, 4)
-        })
-
-        Items["CopyBtn"]:OnHover(function()
-            Items["CopyBtn"]:Tween(nil, { BackgroundTransparency = 0 })
-        end)
-
-        Items["CopyBtn"]:OnHoverLeave(function()
-            Items["CopyBtn"]:Tween(nil, { BackgroundTransparency = 0.2 })
-        end)
-
-        Items["CopyBtn"]:Connect("MouseButton1Down", function()
-            setclipboard(CodeItem.Code)
-            Library:Notification({
-                Title = "Copied",
-                Description = "Code copied to clipboard!",
-                Duration = 2,
-                Icon = "107759198829431"
-            })
-            Library:SafeCall(CodeItem.OnCopy)
-        end)
+    function CodeItem:RefreshPosition(Bool)
+        if Bool then
+            Title:Tween(TweenInfo.new(1), { Position = UDim2New(0, 0, 0, 0) })
+            CodeBG:Tween(TweenInfo.new(1), { Position = UDim2New(0, 0, 0, 22) })
+        else
+            Title.Instance.Position = UDim2New(0, 30, 0, 0)
+            CodeBG.Instance.Position = UDim2New(0, 30, 0, 22)
+        end
     end
 
     function CodeItem:SetCode(NewCode)
-        CodeItem.Code = NewCode
-        Items["CodeText"].Instance.Text = NewCode
+        CodeText.Instance.Text = NewCode
     end
 
-    function CodeItem:GetCode()
-        return CodeItem.Code
-    end
-
-    CodeItem.Section.Elements[#CodeItem.Section.Elements + 1] = CodeItem
+    self.Elements[#self.Elements + 1] = CodeItem
     return CodeItem
 end
 
@@ -8607,7 +8595,7 @@ Library.Sections.NumberSlider = function(self, Data)
     return SliderItem
 end
 
--- ==================== SWITCH (NUEVO) ====================
+-- ==================== SWITCH (CORREGIDO) ====================
 Library.Sections.Switch = function(self, Data)
     Data = Data or {}
 
@@ -8646,15 +8634,18 @@ Library.Sections.Switch = function(self, Data)
             TextSize = 14,
         }) Items["Text"]:AddToTheme({TextColor3 = "Text"})
 
-        Items["SwitchBG"] = Instances:Create("Frame", {
+        Items["SwitchBG"] = Instances:Create("TextButton", {
             Parent = Items["Switch"].Instance,
             Name = "\0",
             Size = UDim2New(0, 44, 0, 24),
             Position = UDim2New(1, -54, 0, 3),
             BackgroundColor3 = FromRGB(60, 60, 70),
             BorderSizePixel = 0,
+            AutoButtonColor = false,
+            Text = "",
             ZIndex = 2
         })
+        Items["SwitchBG"]:AddToTheme({BackgroundColor3 = "Element"})
         Instances:Create("UICorner", { Parent = Items["SwitchBG"].Instance, CornerRadius = UDimNew(1, 0) })
 
         Items["SwitchKnob"] = Instances:Create("Frame", {
@@ -8673,11 +8664,11 @@ Library.Sections.Switch = function(self, Data)
     local function UpdateState(State)
         SwitchItem.Value = State
         if State then
-            Items["SwitchBG"].Instance.BackgroundColor3 = Library.Theme.Accent
-            Items["SwitchKnob"].Instance.Position = UDim2New(1, -22, 0, 2)
+            Items["SwitchBG"]:Tween(nil, {BackgroundColor3 = Library.Theme.Accent})
+            Items["SwitchKnob"]:Tween(nil, {Position = UDim2New(1, -22, 0, 2)})
         else
-            Items["SwitchBG"].Instance.BackgroundColor3 = FromRGB(60, 60, 70)
-            Items["SwitchKnob"].Instance.Position = UDim2New(0, 2, 0, 2)
+            Items["SwitchBG"]:Tween(nil, {BackgroundColor3 = FromRGB(60, 60, 70)})
+            Items["SwitchKnob"]:Tween(nil, {Position = UDim2New(0, 2, 0, 2)})
         end
         Library.Flags[SwitchItem.Flag] = State
         Library:SafeCall(SwitchItem.Callback, State)
@@ -8685,6 +8676,7 @@ Library.Sections.Switch = function(self, Data)
 
     UpdateState(SwitchItem.Default)
 
+    -- CLICK FUNCIONA AHORA
     Items["SwitchBG"]:Connect("MouseButton1Down", function()
         UpdateState(not SwitchItem.Value)
     end)

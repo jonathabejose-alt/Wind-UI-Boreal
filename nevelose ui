@@ -675,34 +675,6 @@ local Library do
 
         Library.Font = SemiBold
 
--- ==================== OPTIMIZACIÓN DE RENDIMIENTO ====================
-local HeartbeatCount = 0
-local MAX_HEARTBEATS = 1
-
-local OldConnect = Library.Connect
-Library.Connect = function(self, Event, Callback, Name)
-    if Event == RunService.Heartbeat then
-        HeartbeatCount = HeartbeatCount + 1
-        if HeartbeatCount > MAX_HEARTBEATS then
-            local throttle = 0
-            local fn = Callback
-            Callback = function(dt)
-                throttle = throttle + dt
-                if throttle >= 0.2 then
-                    throttle = 0
-                    fn(dt)
-                end
-            end
-        end
-    elseif Event == RunService.RenderStepped then
-        return {Connection = {Disconnect = function() end}}
-    end
-    return OldConnect(self, Event, Callback, Name)
-end
-
-Library.Tween.Time = 0.15
-Library.FadeSpeed = 0.1
-
 Library.Holder = Instances:Create("ScreenGui", {
         Parent = gethui(),
         Name = "\0",

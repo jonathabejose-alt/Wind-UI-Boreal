@@ -7879,7 +7879,7 @@ Library.Sections.Group = function(self, Data)
     return GroupItem
 end
 
--- ==================== PARAGRAPH ====================
+-- ==================== PARAGRAPH (CORREGIDO) ====================
 Library.Sections.Paragraph = function(self, Data)
     Data = Data or {}
     local ParaItem = {
@@ -7887,24 +7887,85 @@ Library.Sections.Paragraph = function(self, Data)
         Title = Data.Title or "", Desc = Data.Desc or ""
     }
     local Items = {} do
-        Items["Container"] = Instances:Create("Frame", { Parent = ParaItem.Section.Items["Content"].Instance, BackgroundTransparency = 1, Size = UDim2New(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BorderSizePixel = 0 })
-        Items["Title"] = Instances:Create("TextLabel", { Parent = Items["Container"].Instance, FontFace = Library.Font, TextColor3 = FromRGB(240, 240, 240), Text = ParaItem.Title, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2New(0, 0, 0, 15), BackgroundTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, TextSize = 14, ZIndex = 2 })
+        Items["Container"] = Instances:Create("Frame", { 
+            Parent = ParaItem.Section.Items["Content"].Instance, 
+            BackgroundTransparency = 1, 
+            Size = UDim2New(1, 0, 0, 0), 
+            AutomaticSize = Enum.AutomaticSize.Y, 
+            BorderSizePixel = 0 
+        })
+        Items["Title"] = Instances:Create("TextLabel", { 
+            Parent = Items["Container"].Instance, 
+            FontFace = Library.Font, 
+            TextColor3 = FromRGB(240, 240, 240), 
+            Text = ParaItem.Title, 
+            AutomaticSize = Enum.AutomaticSize.X, 
+            Size = UDim2New(0, 0, 0, 15), 
+            BackgroundTransparency = 1, 
+            TextXAlignment = Enum.TextXAlignment.Left, 
+            TextSize = 14, 
+            ZIndex = 2 
+        })
         Items["Title"]:AddToTheme({TextColor3 = "Text"})
-        Items["Desc"] = Instances:Create("TextLabel", { Parent = Items["Container"].Instance, FontFace = Library.Font, TextColor3 = FromRGB(180, 180, 180), Text = ParaItem.Desc, Size = UDim2New(1, 0, 0, 0), Position = UDim2New(0, 0, 0, 22), BackgroundTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, TextSize = 12, TextWrapped = true, AutomaticSize = Enum.AutomaticSize.Y, ZIndex = 2 })
+        
+        Items["Desc"] = Instances:Create("TextLabel", { 
+            Parent = Items["Container"].Instance, 
+            FontFace = Library.Font, 
+            TextColor3 = FromRGB(180, 180, 180), 
+            Text = ParaItem.Desc, 
+            Size = UDim2New(1, 0, 0, 0), 
+            Position = UDim2New(0, 0, 0, 22), 
+            BackgroundTransparency = 1, 
+            TextXAlignment = Enum.TextXAlignment.Left, 
+            TextSize = 12, 
+            TextWrapped = true, 
+            AutomaticSize = Enum.AutomaticSize.Y, 
+            ZIndex = 2 
+        })
         Items["Desc"]:AddToTheme({TextColor3 = "Text"})
     end
+    
     if Data.Buttons then
+        local ButtonsContainer = Instances:Create("Frame", {
+            Parent = Items["Container"].Instance,
+            BackgroundTransparency = 1,
+            Size = UDim2New(1, 0, 0, 0),
+            Position = UDim2New(0, 0, 0, 0),
+            AutomaticSize = Enum.AutomaticSize.Y,
+            BorderSizePixel = 0,
+            ZIndex = 3
+        })
+        
+        -- Para espaciar los botones
+        local LastButton = nil
+        
         for _, BtnData in pairs(Data.Buttons) do
-            local Btn = Instances:Create("TextButton", { Parent = Items["Container"].Instance, FontFace = Library.Font, Text = BtnData.Title or "", TextColor3 = FromRGB(240, 240, 240), TextSize = 12, Size = UDim2New(0, 0, 0, 22), Position = UDim2New(0, 0, 0, 0), AnchorPoint = Vector2New(0, 0), BackgroundColor3 = Library.Theme.Accent, BackgroundTransparency = 0.85, BorderSizePixel = 0, AutoButtonColor = false, AutomaticSize = Enum.AutomaticSize.X, ZIndex = 3 })
+            local Btn = Instances:Create("TextButton", { 
+                Parent = ButtonsContainer.Instance, 
+                FontFace = Library.Font, 
+                Text = BtnData.Title or "", 
+                TextColor3 = FromRGB(240, 240, 240), 
+                TextSize = 12, 
+                Size = UDim2New(0, 0, 0, 22), 
+                Position = LastButton and UDim2New(0, 10, 0, 24) or UDim2New(0, 0, 0, 0),
+                BackgroundColor3 = Library.Theme.Accent, 
+                BackgroundTransparency = 0.85, 
+                BorderSizePixel = 0, 
+                AutoButtonColor = false, 
+                AutomaticSize = Enum.AutomaticSize.X, 
+                ZIndex = 3 
+            })
             Btn:AddToTheme({BackgroundColor3 = "Accent"})
             Instances:Create("UICorner", { Parent = Btn.Instance, CornerRadius = UDimNew(0, 4) })
             Instances:Create("UIPadding", { Parent = Btn.Instance, PaddingLeft = UDimNew(0, 8), PaddingRight = UDimNew(0, 8) })
             Btn:OnHover(function() Btn:Tween(nil, {BackgroundTransparency = 0.7}) end)
             Btn:OnHoverLeave(function() Btn:Tween(nil, {BackgroundTransparency = 0.85}) end)
             Btn:Connect("MouseButton1Down", function() Library:SafeCall(BtnData.Callback) end)
-            if #Data.Buttons > 1 then Btn.Instance.Position = UDim2New(0, (#Data.Buttons == 2 and 75 or 0), 0, 0) end
+            
+            LastButton = Btn
         end
     end
+    
     ParaItem.Section.Elements[#ParaItem.Section.Elements + 1] = ParaItem
     return ParaItem
 end

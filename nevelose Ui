@@ -4794,9 +4794,7 @@ end)
 
 function Section:TweenElements(Bool, Debounce)
     for Index, Value in Section.Elements do
-        if Value and Value.RefreshPosition then
-            Value:RefreshPosition(Bool)
-        end
+        Value:RefreshPosition(Bool)
         if not Debounce then 
             task.wait(0.03)
         end

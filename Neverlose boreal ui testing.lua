@@ -993,82 +993,92 @@ local Library do
     end
 
     Library.MakeBlurred = function(self, Item, Window)
-        Item = Item.Instance
-        local BlurItem = Item
+    -- Si el blur no es necesario, salir inmediatamente
+    if not Window.BlurEnabled then return end
+    
+    Item = Item.Instance
+    local BlurItem = Item
 
-        local Part = Instances:Create("Part", {
-            Material = Enum.Material.Glass,
-            Transparency = 1,
-            Reflectance = 1,
-            CastShadow = false,
-            Anchored = true,
-            CanCollide = false,
-            CanQuery = false,
-            CollisionGroup = " ",
-            Size = Vector3New(1, 1, 1) * 0.01,
-            Color = FromRGB(0,0,0),
-            Parent = Camera
-        })
-        -- Добавляем в список на удаление
-        table.insert(self.ToClean, Part.Instance)
+    local Part = Instances:Create("Part", {
+        Material = Enum.Material.Glass,
+        Transparency = 1,
+        Reflectance = 1,
+        CastShadow = false,
+        Anchored = true,
+        CanCollide = false,
+        CanQuery = false,
+        CollisionGroup = " ",
+        Size = Vector3New(1, 1, 1) * 0.01,
+        Color = FromRGB(0,0,0),
+        Parent = Camera
+    })
+    table.insert(self.ToClean, Part.Instance)
+
+    local BlockMesh = Instances:Create("BlockMesh", {Parent = Part.Instance})
+
+    local DepthOfField = Instances:Create("DepthOfFieldEffect", {
+        Parent = Lighting,
+        Enabled = true,
+        FarIntensity = 0,
+        FocusDistance = 0,
+        InFocusRadius = 1000,
+        NearIntensity = 1,
+        Name = ""
+    })
+    table.insert(self.ToClean, DepthOfField.Instance)
+
+    -- Variables para limitar actualizaciones
+    local LastBlurUpdate = 0
+    local BLUR_UPDATE_INTERVAL = 0.1 -- Actualizar blur cada 100ms
+    local wasOpen = false
+    local wasVisible = false
+
+    Library:Connect(RunService.Heartbeat, function(dt)
+        LastBlurUpdate = LastBlurUpdate + dt
+        
+        -- Solo actualizar si cambió el estado o pasó el intervalo
+        local isOpen = Window.IsOpen
+        local isVisible = Item.Visible
+        
+        if isOpen ~= wasOpen or isVisible ~= wasVisible or LastBlurUpdate >= BLUR_UPDATE_INTERVAL then
+            LastBlurUpdate = 0
+            wasOpen = isOpen
+            wasVisible = isVisible
             
-        local BlockMesh = Instances:Create("BlockMesh", {Parent = Part.Instance})
+            if isOpen and isVisible then
+                DepthOfField:Tween(nil, {NearIntensity = 1})
+                Part:Tween(nil, {Transparency = 0.97})
+                Part:Tween(nil, {Size = Vector3New(1, 1, 1) * 0.01})
 
-        local DepthOfField = Instances:Create("DepthOfFieldEffect", {
-            Parent = Lighting,
-            Enabled = true,
-            FarIntensity = 0,
-            FocusDistance = 0,
-            InFocusRadius = 1000,
-            NearIntensity = 1,
-            Name = ""
-        })
-        -- Добавляем в список на удаление
-        table.insert(self.ToClean, DepthOfField.Instance)
+                local Corner0 = BlurItem.AbsolutePosition
+                local Corner1 = Corner0 + BlurItem.AbsoluteSize
 
-        Library:Connect(RunService.Heartbeat, function()
-            if Window.IsOpen then
-                if Item.Visible then
-                    DepthOfField:Tween(nil, {NearIntensity = 1})
+                local Ray0 = Camera.ScreenPointToRay(Camera, Corner0.X, Corner0.Y, 1)
+                local Ray1 = Camera.ScreenPointToRay(Camera, Corner1.X, Corner1.Y, 1)
 
-                    Part:Tween(nil, {Transparency = 0.97})
-                    Part:Tween(nil, {Size = Vector3New(1, 1, 1) * 0.01})
+                local Origin = Camera.CFrame.Position + Camera.CFrame.LookVector * (0.05 - Camera.NearPlaneZ)
+                local Normal = Camera.CFrame.LookVector
 
-                    local Corner0 = BlurItem.AbsolutePosition;
-                    local Corner1 = Corner0 + BlurItem.AbsoluteSize;
-                        
-                    local Ray0 = Camera.ScreenPointToRay(Camera, Corner0.X, Corner0.Y, 1);
-                    local Ray1 = Camera.ScreenPointToRay(Camera, Corner1.X, Corner1.Y, 1);
+                local Position0 = Library:GetCalculatedRayPosition(Origin, Normal, Ray0.Origin, Ray0.Direction)
+                local Position1 = Library:GetCalculatedRayPosition(Origin, Normal, Ray1.Origin, Ray1.Direction)
 
-                    local Origin = Camera.CFrame.Position + Camera.CFrame.LookVector * (0.05 - Camera.NearPlaneZ);
+                Position0 = Camera.CFrame:PointToObjectSpace(Position0)
+                Position1 = Camera.CFrame:PointToObjectSpace(Position1)
 
-                    local Normal = Camera.CFrame.LookVector;
+                local Size = Position1 - Position0
+                local Center = (Position0 + Position1) / 2
 
-                    local Position0 = Library:GetCalculatedRayPosition(Origin, Normal, Ray0.Origin, Ray0.Direction)
-                    local Position1 = Library:GetCalculatedRayPosition(Origin, Normal, Ray1.Origin, Ray1.Direction)
-
-                    Position0 = Camera.CFrame:PointToObjectSpace(Position0)
-                    Position1 = Camera.CFrame:PointToObjectSpace(Position1)
-
-                    local Size = Position1 - Position0
-                    local Center = (Position0 + Position1) / 2
-
-                    BlockMesh.Instance.Offset = Center
-                    BlockMesh.Instance.Scale  = Size / 0.0101
-
-                    Part.Instance.CFrame = Camera.CFrame
-                else
-                    DepthOfField:Tween(nil, {NearIntensity = 0})
-                    BlockMesh.Instance.Offset = Vector3New(0, 0, 0)
-                    BlockMesh.Instance.Scale  = Vector3New(0, 0, 0)
-                end
+                BlockMesh.Instance.Offset = Center
+                BlockMesh.Instance.Scale  = Size / 0.0101
+                Part.Instance.CFrame = Camera.CFrame
             else
                 DepthOfField:Tween(nil, {NearIntensity = 0})
                 BlockMesh.Instance.Offset = Vector3New(0, 0, 0)
                 BlockMesh.Instance.Scale  = Vector3New(0, 0, 0)
             end
-        end)
-    end
+        end
+    end)
+end
 
     Library.EscapePattern = function(self, String)
         local ShouldEscape = false 
@@ -1569,30 +1579,29 @@ local Library do
                 Colorpicker:Update(true)
             end
 
-            local Debounce = false
-            local RenderStepped  
+local Debounce = false
+local RenderStepped  
 
-            function Colorpicker:SetOpen(Bool)
-                if Debounce then 
-                    return
-                end
+function Colorpicker:SetOpen(Bool)
+    if Debounce then 
+        return
+    end
 
-                Colorpicker.IsOpen = Bool
+    Colorpicker.IsOpen = Bool
+    Debounce = true 
 
-                Debounce = true 
+    if Colorpicker.IsOpen then 
+        Items["ColorpickerWindow"].Instance.Visible = true
+        Items["ColorpickerWindow"].Instance.Parent = Library.Holder.Instance
 
-                if Colorpicker.IsOpen then 
-                    Items["ColorpickerWindow"].Instance.Visible = true
-                    Items["ColorpickerWindow"].Instance.Parent = Library.Holder.Instance
-                    
-                    RenderStepped = RunService.Heartbeat:Connect(function(dt)
-                        Items["ColorpickerWindow"].Instance.Position = UDim2New(
-                            0, 
-                            Items["ColorpickerButton"].Instance.AbsolutePosition.X, 
-                            0, 
-                            Items["ColorpickerButton"].Instance.AbsolutePosition.Y + Items["ColorpickerButton"].Instance.AbsoluteSize.Y + 5
-                        )
-                    end)
+        RenderStepped = RunService.Heartbeat:Connect(function(dt)
+            Items["ColorpickerWindow"].Instance.Position = UDim2New(
+                0, 
+                Items["ColorpickerButton"].Instance.AbsolutePosition.X, 
+                0, 
+                Items["ColorpickerButton"].Instance.AbsolutePosition.Y + Items["ColorpickerButton"].Instance.AbsoluteSize.Y + 5
+            )
+        end)
 
                     if Data.Section.IsSettings ~= true then
                         for Index, Value in Library.OpenFrames do 

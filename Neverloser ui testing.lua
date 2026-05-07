@@ -3446,30 +3446,54 @@ end
             end
             --]]
 
-            function Window:Init()
-                for __, Value in Window.Pages do 
-                    if Value.Active then 
-                        for _, Value2 in Value.Sections do 
-                            task.spawn(function()
-                                Value2:TweenElements(true)
-                                Library:RefreshConfigsList(ConfigsDropdown)
-                            end)
-                        end
-                    end
-                end
-            end
-
-            Library:Connect(UserInputService.InputBegan, function(Input)
-                if tostring(Input.KeyCode) == Library.MenuKeybind or tostring(Input.UserInputType) == Library.MenuKeybind then
-                    Window:SetOpen(not Window.IsOpen)
-                end
-            end)
-
-            Window:SetCenter()
-            task.wait()
-            Window:SetOpen(true)
-            return setmetatable(Window, Library)
+function Window:Init()
+    -- Limpiar conexiones viejas
+    for _, conn in pairs(Library.Connections) do
+        if conn.Connection then
+            conn.Connection:Disconnect()
         end
+    end
+    Library.Connections = {}
+    
+    -- Limpiar threads viejos
+    for _, thread in pairs(Library.Threads) do
+        if coroutine.status(thread) ~= "dead" then
+            coroutine.close(thread)
+        end
+    end
+    Library.Threads = {}
+    
+    -- Activar página
+    for __, Value in Window.Pages do 
+        if Value.Active then 
+            for _, Value2 in Value.Sections do 
+                task.spawn(function()
+                    Value2:TweenElements(true)
+                    Library:RefreshConfigsList(ConfigsDropdown)
+                end)
+            end
+        end
+    end
+end
+
+local CanToggle = true
+Library:Connect(UserInputService.InputBegan, function(Input)
+    if tostring(Input.KeyCode) == Library.MenuKeybind or tostring(Input.UserInputType) == Library.MenuKeybind then
+        if not CanToggle then return end
+        CanToggle = false
+        
+        Window:SetOpen(not Window.IsOpen)
+        
+        task.delay(0.3, function()
+            CanToggle = true
+        end)
+    end
+end)
+
+Window:SetCenter()
+task.wait()
+Window:SetOpen(true)
+return setmetatable(Window, Library)
 
         Library.Watermark = function(self, Data)
             if not Library.WatermarkFrame then

@@ -563,7 +563,7 @@ local Library do
                 end
             end)
 
-            Library:Connect(RunService.Heartbeat, function()
+            Library:Connect(RunService.RenderStepped, function()
                 if not Resizing or not CurrentSide then 
                     return 
                 end
@@ -675,54 +675,22 @@ local Library do
 
         Library.Font = SemiBold
     end
--- ==================== OPTIMIZACIÓN AGRESIVA ====================
-local HeartbeatCount = 0
-local MAX_HEARTBEATS = 1 -- Solo 1 Heartbeat sin límite
 
-local OldConnect = Library.Connect
-Library.Connect = function(self, Event, Callback, Name)
-    if Event == RunService.Heartbeat then
-        HeartbeatCount = HeartbeatCount + 1
-        if HeartbeatCount > MAX_HEARTBEATS then
-            -- Limitar a solo 5 actualizaciones por segundo
-            local throttle = 0
-            local fn = Callback
-            Callback = function(dt)
-                throttle = throttle + dt
-                if throttle >= 0.2 then -- 5 veces por segundo
-                    throttle = 0
-                    fn(dt)
-                end
-            end
-        end
-    elseif Event == RunService.RenderStepped then
-        -- Bloquear RenderStepped completamente (solo Heartbeat)
-        return {Connection = {Disconnect = function() end}}
-    end
-    return OldConnect(self, Event, Callback, Name)
-end
+    Library.Holder = Instances:Create("ScreenGui", {
+        Parent = gethui(),
+        Name = "\0",
+        ZIndexBehavior = Enum.ZIndexBehavior.Global,
+        DisplayOrder = 2,
+        ResetOnSpawn = false
+    })
 
--- Reducir tiempo de Tweens
-Library.Tween.Time = 0.15
-Library.FadeSpeed = 0.1
-
--- ==================== AQUÍ VA EL HOLDER (FUERA DEL BLOQUE) ====================
-					
-Library.Holder = Instances:Create("ScreenGui", {
-    Parent = gethui(),
-    Name = "\0",
-    ZIndexBehavior = Enum.ZIndexBehavior.Global,
-    DisplayOrder = 2,
-    ResetOnSpawn = false
-})
-
-	Library.UnusedHolder = Instances:Create("ScreenGui", {
-    Parent = gethui(),
-    Name = "\0",
-    ZIndexBehavior = Enum.ZIndexBehavior.Global,
-    Enabled = false,
-    ResetOnSpawn = false
-})
+    Library.UnusedHolder = Instances:Create("ScreenGui", {
+        Parent = gethui(),
+        Name = "\0",
+        ZIndexBehavior = Enum.ZIndexBehavior.Global,
+        Enabled = false,
+        ResetOnSpawn = false
+    })
 
     Library.NotifHolder  = Instances:Create("Frame", {
         Parent = Library.Holder.Instance,
@@ -1025,92 +993,82 @@ Library.Holder = Instances:Create("ScreenGui", {
     end
 
     Library.MakeBlurred = function(self, Item, Window)
-    -- Si el blur no es necesario, salir inmediatamente
-    if not Window.BlurEnabled then return end
-    
-    Item = Item.Instance
-    local BlurItem = Item
+        Item = Item.Instance
+        local BlurItem = Item
 
-    local Part = Instances:Create("Part", {
-        Material = Enum.Material.Glass,
-        Transparency = 1,
-        Reflectance = 1,
-        CastShadow = false,
-        Anchored = true,
-        CanCollide = false,
-        CanQuery = false,
-        CollisionGroup = " ",
-        Size = Vector3New(1, 1, 1) * 0.01,
-        Color = FromRGB(0,0,0),
-        Parent = Camera
-    })
-    table.insert(self.ToClean, Part.Instance)
-
-    local BlockMesh = Instances:Create("BlockMesh", {Parent = Part.Instance})
-
-    local DepthOfField = Instances:Create("DepthOfFieldEffect", {
-        Parent = Lighting,
-        Enabled = true,
-        FarIntensity = 0,
-        FocusDistance = 0,
-        InFocusRadius = 1000,
-        NearIntensity = 1,
-        Name = ""
-    })
-    table.insert(self.ToClean, DepthOfField.Instance)
-
-    -- Variables para limitar actualizaciones
-    local LastBlurUpdate = 0
-    local BLUR_UPDATE_INTERVAL = 0.1 -- Actualizar blur cada 100ms
-    local wasOpen = false
-    local wasVisible = false
-
-    Library:Connect(RunService.Heartbeat, function(dt)
-        LastBlurUpdate = LastBlurUpdate + dt
-        
-        -- Solo actualizar si cambió el estado o pasó el intervalo
-        local isOpen = Window.IsOpen
-        local isVisible = Item.Visible
-        
-        if isOpen ~= wasOpen or isVisible ~= wasVisible or LastBlurUpdate >= BLUR_UPDATE_INTERVAL then
-            LastBlurUpdate = 0
-            wasOpen = isOpen
-            wasVisible = isVisible
+        local Part = Instances:Create("Part", {
+            Material = Enum.Material.Glass,
+            Transparency = 1,
+            Reflectance = 1,
+            CastShadow = false,
+            Anchored = true,
+            CanCollide = false,
+            CanQuery = false,
+            CollisionGroup = " ",
+            Size = Vector3New(1, 1, 1) * 0.01,
+            Color = FromRGB(0,0,0),
+            Parent = Camera
+        })
+        -- Добавляем в список на удаление
+        table.insert(self.ToClean, Part.Instance)
             
-            if isOpen and isVisible then
-                DepthOfField:Tween(nil, {NearIntensity = 1})
-                Part:Tween(nil, {Transparency = 0.97})
-                Part:Tween(nil, {Size = Vector3New(1, 1, 1) * 0.01})
+        local BlockMesh = Instances:Create("BlockMesh", {Parent = Part.Instance})
 
-                local Corner0 = BlurItem.AbsolutePosition
-                local Corner1 = Corner0 + BlurItem.AbsoluteSize
+        local DepthOfField = Instances:Create("DepthOfFieldEffect", {
+            Parent = Lighting,
+            Enabled = true,
+            FarIntensity = 0,
+            FocusDistance = 0,
+            InFocusRadius = 1000,
+            NearIntensity = 1,
+            Name = ""
+        })
+        -- Добавляем в список на удаление
+        table.insert(self.ToClean, DepthOfField.Instance)
 
-                local Ray0 = Camera.ScreenPointToRay(Camera, Corner0.X, Corner0.Y, 1)
-                local Ray1 = Camera.ScreenPointToRay(Camera, Corner1.X, Corner1.Y, 1)
+        Library:Connect(RunService.RenderStepped, function()
+            if Window.IsOpen then
+                if Item.Visible then
+                    DepthOfField:Tween(nil, {NearIntensity = 1})
 
-                local Origin = Camera.CFrame.Position + Camera.CFrame.LookVector * (0.05 - Camera.NearPlaneZ)
-                local Normal = Camera.CFrame.LookVector
+                    Part:Tween(nil, {Transparency = 0.97})
+                    Part:Tween(nil, {Size = Vector3New(1, 1, 1) * 0.01})
 
-                local Position0 = Library:GetCalculatedRayPosition(Origin, Normal, Ray0.Origin, Ray0.Direction)
-                local Position1 = Library:GetCalculatedRayPosition(Origin, Normal, Ray1.Origin, Ray1.Direction)
+                    local Corner0 = BlurItem.AbsolutePosition;
+                    local Corner1 = Corner0 + BlurItem.AbsoluteSize;
+                        
+                    local Ray0 = Camera.ScreenPointToRay(Camera, Corner0.X, Corner0.Y, 1);
+                    local Ray1 = Camera.ScreenPointToRay(Camera, Corner1.X, Corner1.Y, 1);
 
-                Position0 = Camera.CFrame:PointToObjectSpace(Position0)
-                Position1 = Camera.CFrame:PointToObjectSpace(Position1)
+                    local Origin = Camera.CFrame.Position + Camera.CFrame.LookVector * (0.05 - Camera.NearPlaneZ);
 
-                local Size = Position1 - Position0
-                local Center = (Position0 + Position1) / 2
+                    local Normal = Camera.CFrame.LookVector;
 
-                BlockMesh.Instance.Offset = Center
-                BlockMesh.Instance.Scale  = Size / 0.0101
-                Part.Instance.CFrame = Camera.CFrame
+                    local Position0 = Library:GetCalculatedRayPosition(Origin, Normal, Ray0.Origin, Ray0.Direction)
+                    local Position1 = Library:GetCalculatedRayPosition(Origin, Normal, Ray1.Origin, Ray1.Direction)
+
+                    Position0 = Camera.CFrame:PointToObjectSpace(Position0)
+                    Position1 = Camera.CFrame:PointToObjectSpace(Position1)
+
+                    local Size = Position1 - Position0
+                    local Center = (Position0 + Position1) / 2
+
+                    BlockMesh.Instance.Offset = Center
+                    BlockMesh.Instance.Scale  = Size / 0.0101
+
+                    Part.Instance.CFrame = Camera.CFrame
+                else
+                    DepthOfField:Tween(nil, {NearIntensity = 0})
+                    BlockMesh.Instance.Offset = Vector3New(0, 0, 0)
+                    BlockMesh.Instance.Scale  = Vector3New(0, 0, 0)
+                end
             else
                 DepthOfField:Tween(nil, {NearIntensity = 0})
                 BlockMesh.Instance.Offset = Vector3New(0, 0, 0)
                 BlockMesh.Instance.Scale  = Vector3New(0, 0, 0)
             end
-        end
-    end)
-end
+        end)
+    end
 
     Library.EscapePattern = function(self, String)
         local ShouldEscape = false 
@@ -1611,29 +1569,30 @@ end
                 Colorpicker:Update(true)
             end
 
-local Debounce = false
-local RenderStepped  
+            local Debounce = false
+            local RenderStepped  
 
-function Colorpicker:SetOpen(Bool)
-    if Debounce then 
-        return
-    end
+            function Colorpicker:SetOpen(Bool)
+                if Debounce then 
+                    return
+                end
 
-    Colorpicker.IsOpen = Bool
-    Debounce = true 
+                Colorpicker.IsOpen = Bool
 
-    if Colorpicker.IsOpen then 
-        Items["ColorpickerWindow"].Instance.Visible = true
-        Items["ColorpickerWindow"].Instance.Parent = Library.Holder.Instance
+                Debounce = true 
 
-        RenderStepped = RunService.Heartbeat:Connect(function(dt)
-            Items["ColorpickerWindow"].Instance.Position = UDim2New(
-                0, 
-                Items["ColorpickerButton"].Instance.AbsolutePosition.X, 
-                0, 
-                Items["ColorpickerButton"].Instance.AbsolutePosition.Y + Items["ColorpickerButton"].Instance.AbsoluteSize.Y + 5
-            )
-        end)
+                if Colorpicker.IsOpen then 
+                    Items["ColorpickerWindow"].Instance.Visible = true
+                    Items["ColorpickerWindow"].Instance.Parent = Library.Holder.Instance
+                    
+                    RenderStepped = RunService.RenderStepped:Connect(function()
+                        Items["ColorpickerWindow"].Instance.Position = UDim2New(
+                            0, 
+                            Items["ColorpickerButton"].Instance.AbsolutePosition.X, 
+                            0, 
+                            Items["ColorpickerButton"].Instance.AbsolutePosition.Y + Items["ColorpickerButton"].Instance.AbsoluteSize.Y + 5
+                        )
+                    end)
 
                     if Data.Section.IsSettings ~= true then
                         for Index, Value in Library.OpenFrames do 
@@ -3123,7 +3082,7 @@ end
                             SettingsItems["Settings"].Instance.Visible = true
                             SettingsItems["Settings"].Instance.Parent = Library.Holder.Instance
                             
-                            RenderStepped = RunService.Heartbeat:Connect(function(dt)
+                            RenderStepped = RunService.RenderStepped:Connect(function()
                                 SettingsItems["Settings"].Instance.Position = UDim2New(0, Items["SettingsIcon"].Instance.AbsolutePosition.X, 0, Items["SettingsIcon"].Instance.AbsolutePosition.Y + Items["SettingsButton"].Instance.AbsoluteSize.Y + 108)
                                 SettingsItems["Settings"].Instance.Size = UDim2New(0, 325, 0, 230)
                             end)
@@ -3446,54 +3405,30 @@ end
             end
             --]]
 
-function Window:Init()
-    -- Limpiar conexiones viejas
-    for _, conn in pairs(Library.Connections) do
-        if conn.Connection then
-            conn.Connection:Disconnect()
-        end
-    end
-    Library.Connections = {}
-    
-    -- Limpiar threads viejos
-    for _, thread in pairs(Library.Threads) do
-        if coroutine.status(thread) ~= "dead" then
-            coroutine.close(thread)
-        end
-    end
-    Library.Threads = {}
-    
-    -- Activar página
-    for __, Value in Window.Pages do 
-        if Value.Active then 
-            for _, Value2 in Value.Sections do 
-                task.spawn(function()
-                    Value2:TweenElements(true)
-                    Library:RefreshConfigsList(ConfigsDropdown)
-                end)
+            function Window:Init()
+                for __, Value in Window.Pages do 
+                    if Value.Active then 
+                        for _, Value2 in Value.Sections do 
+                            task.spawn(function()
+                                Value2:TweenElements(true)
+                                Library:RefreshConfigsList(ConfigsDropdown)
+                            end)
+                        end
+                    end
+                end
             end
+
+            Library:Connect(UserInputService.InputBegan, function(Input)
+                if tostring(Input.KeyCode) == Library.MenuKeybind or tostring(Input.UserInputType) == Library.MenuKeybind then
+                    Window:SetOpen(not Window.IsOpen)
+                end
+            end)
+
+            Window:SetCenter()
+            task.wait()
+            Window:SetOpen(true)
+            return setmetatable(Window, Library)
         end
-    end
-end
-
-local CanToggle = true
-Library:Connect(UserInputService.InputBegan, function(Input)
-    if tostring(Input.KeyCode) == Library.MenuKeybind or tostring(Input.UserInputType) == Library.MenuKeybind then
-        if not CanToggle then return end
-        CanToggle = false
-        
-        Window:SetOpen(not Window.IsOpen)
-        
-        task.delay(0.3, function()
-            CanToggle = true
-        end)
-    end
-end)
-
-Window:SetCenter()
-task.wait()
-Window:SetOpen(true)
-return setmetatable(Window, Library)
 
         Library.Watermark = function(self, Data)
             if not Library.WatermarkFrame then
@@ -4859,16 +4794,14 @@ return setmetatable(Window, Library)
                 end
             end)
 
-function Section:TweenElements(Bool, Debounce)
-    for Index, Value in Section.Elements do
-        if Value and Value.RefreshPosition then
-            Value:RefreshPosition(Bool)
-        end
-        if not Debounce then 
-            task.wait(0.03)
-        end
-    end
-end
+            function Section:TweenElements(Bool, Debounce)
+                for Index, Value in Section.Elements do
+                    Value:RefreshPosition(Bool)
+                    if not Debounce then 
+                        task.wait(0.03)
+                    end
+                end
+            end
 
             Items["Toggle"]:Connect("MouseButton1Down", function()
                 Section:ToggleBackground()
@@ -5211,7 +5144,7 @@ end
                         SettingsItem["Settings"].Instance.Visible = true
                         SettingsItem["Settings"].Instance.Parent = Library.Holder.Instance
                         
-                        RenderStepped = RunService.Heartbeat:Connect(function(dt)
+                        RenderStepped = RunService.RenderStepped:Connect(function()
                             SettingsItem["Settings"].Instance.Position = UDim2New(
                                 0, Items["Toggle"].Instance.AbsolutePosition.X + Items["Toggle"].Instance.AbsoluteSize.X / 1.9 + 15, 
                                 0, Items["Toggle"].Instance.AbsolutePosition.Y + Items["Toggle"].Instance.AbsoluteSize.Y + Size / 1.9)
@@ -6061,7 +5994,7 @@ end
                         end
                     end)
                     
-                    RenderStepped = RunService.Heartbeat:Connect(function(dt)
+                    RenderStepped = RunService.RenderStepped:Connect(function()
                         Items["OptionHolder"].Instance.Position = UDim2New(0, Items["RealDropdown"].Instance.AbsolutePosition.X, 0, Items["RealDropdown"].Instance.AbsolutePosition.Y + Items["RealDropdown"].Instance.AbsoluteSize.Y + 5)
                         Items["OptionHolder"].Instance.Size = UDim2New(0, Items["RealDropdown"].Instance.AbsoluteSize.X, 0, Dropdown.OptionHolderSize)
                     end)
@@ -8387,391 +8320,6 @@ Library.Sections.Segmented = function(self, Data)
     Segmented.Section.Elements[#Segmented.Section.Elements+1] = Segmented
     return Segmented
         end
-
--- ==================== CODE (CORREGIDO) ====================
-Library.Sections.Code = function(self, Data)
-    Data = Data or {}
-
-    local CodeItem = {
-        Window = self.Window,
-        Page = self.Page,
-        Section = self,
-        Title = Data.Title or "Code",
-        Code = Data.Code or "",
-        OnCopy = Data.OnCopy or function() end
-    }
-
-    local Items = {} do
-        Items["Container"] = Instances:Create("Frame", {
-            Parent = CodeItem.Section.Items["Content"].Instance,
-            Name = "\0",
-            BackgroundTransparency = 1,
-            Size = UDim2New(1, 0, 0, 0),
-            AutomaticSize = Enum.AutomaticSize.Y,
-            BorderSizePixel = 0,
-            BackgroundColor3 = FromRGB(255, 255, 255)
-        })
-
-        Items["Title"] = Instances:Create("TextLabel", {
-            Parent = Items["Container"].Instance,
-            Name = "\0",
-            FontFace = Library.Font,
-            TextColor3 = FromRGB(240, 240, 240),
-            TextTransparency = 0.3,
-            Text = CodeItem.Title,
-            AutomaticSize = Enum.AutomaticSize.X,
-            Size = UDim2New(0, 0, 0, 15),
-            Position = UDim2New(0, 0, 0, 0),
-            BackgroundTransparency = 1,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            BorderSizePixel = 0,
-            ZIndex = 2,
-            TextSize = 14,
-            BackgroundColor3 = FromRGB(255, 255, 255)
-        })
-        Items["Title"]:AddToTheme({TextColor3 = "Text"})
-
-        Items["CodeBG"] = Instances:Create("Frame", {
-            Parent = Items["Container"].Instance,
-            Name = "\0",
-            Size = UDim2New(1, -20, 0, 0),
-            Position = UDim2New(0, 10, 0, 22),
-            BackgroundColor3 = FromRGB(18, 18, 22),
-            BorderSizePixel = 0,
-            AutomaticSize = Enum.AutomaticSize.Y,
-            ZIndex = 2
-        })
-        Items["CodeBG"]:AddToTheme({BackgroundColor3 = "Element"})
-        Instances:Create("UICorner", { 
-            Parent = Items["CodeBG"].Instance, 
-            CornerRadius = UDimNew(0, 6) 
-        })
-        
-        -- ✅ CORREGIDO: UIPadding con UDim
-        Instances:Create("UIPadding", { 
-            Parent = Items["CodeBG"].Instance, 
-            PaddingTop = UDimNew(0, 10),
-            PaddingBottom = UDimNew(0, 10),
-            PaddingLeft = UDimNew(0, 12),
-            PaddingRight = UDimNew(0, 12)
-        })
-
-        Items["CodeText"] = Instances:Create("TextLabel", {
-            Parent = Items["CodeBG"].Instance,
-            Name = "\0",
-            FontFace = Font.new("rbxassetid://12187365364", Enum.FontWeight.Regular, Enum.FontStyle.Normal),
-            Text = CodeItem.Code,
-            TextColor3 = FromRGB(180, 220, 180),
-            TextSize = 12,
-            Size = UDim2New(1, -70, 0, 0),
-            BackgroundTransparency = 1,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            TextYAlignment = Enum.TextYAlignment.Top,
-            TextWrapped = true,
-            AutomaticSize = Enum.AutomaticSize.Y,
-            ZIndex = 3
-        })
-
-        Items["CopyBtn"] = Instances:Create("TextButton", {
-            Parent = Items["CodeBG"].Instance,
-            Name = "\0",
-            FontFace = Library.Font,
-            Text = "Copy",
-            TextColor3 = FromRGB(240, 240, 240),
-            TextSize = 12,
-            Size = UDim2New(0, 55, 0, 28),
-            Position = UDim2New(1, -10, 0, 10),
-            AnchorPoint = Vector2New(1, 0),
-            BackgroundColor3 = Library.Theme.Accent,
-            BackgroundTransparency = 0.15,
-            BorderSizePixel = 0,
-            AutoButtonColor = false,
-            ZIndex = 4
-        })
-        Items["CopyBtn"]:AddToTheme({BackgroundColor3 = "Accent"})
-        Instances:Create("UICorner", { 
-            Parent = Items["CopyBtn"].Instance, 
-            CornerRadius = UDimNew(0, 4) 
-        })
-
-        Items["CopyBtn"]:OnHover(function()
-            Items["CopyBtn"]:Tween(nil, { BackgroundTransparency = 0 })
-        end)
-
-        Items["CopyBtn"]:OnHoverLeave(function()
-            Items["CopyBtn"]:Tween(nil, { BackgroundTransparency = 0.15 })
-        end)
-
-        Items["CopyBtn"]:Connect("MouseButton1Down", function()
-            setclipboard(CodeItem.Code)
-            Library:Notification({
-                Title = "Copied",
-                Description = "Code copied!",
-                Duration = 2,
-                Icon = "107759198829431"
-            })
-            Library:SafeCall(CodeItem.OnCopy)
-        end)
-    end
-
-    function CodeItem:SetCode(NewCode)
-        CodeItem.Code = NewCode
-        Items["CodeText"].Instance.Text = NewCode
-    end
-
-    function CodeItem:Get()
-        return CodeItem.Code
-    end
-
-    CodeItem.Section.Elements[#CodeItem.Section.Elements + 1] = CodeItem
-    return CodeItem
-end
-
--- ==================== NUMBER SLIDER (NUEVO) ====================
-Library.Sections.NumberSlider = function(self, Data)
-    Data = Data or {}
-
-    local SliderItem = {
-        Window = self.Window,
-        Page = self.Page,
-        Section = self,
-        Name = Data.Name or "Slider",
-        Flag = Data.Flag or Library:NextFlag(),
-        Min = Data.Min or 0,
-        Max = Data.Max or 100,
-        Default = Data.Default or 50,
-        Suffix = Data.Suffix or "",
-        Callback = Data.Callback or function() end,
-        Value = nil
-    }
-
-    local Items = {} do
-        Items["Slider"] = Instances:Create("Frame", {
-            Parent = SliderItem.Section.Items["Content"].Instance,
-            Name = "\0",
-            BackgroundTransparency = 1,
-            Size = UDim2New(1, 0, 0, 45),
-            BorderSizePixel = 0,
-            BackgroundColor3 = FromRGB(255, 255, 255)
-        })
-
-        Items["Text"] = Instances:Create("TextLabel", {
-            Parent = Items["Slider"].Instance,
-            Name = "\0",
-            FontFace = Library.Font,
-            TextColor3 = FromRGB(240, 240, 240),
-            Text = SliderItem.Name,
-            Size = UDim2New(1, -80, 0, 20),
-            Position = UDim2New(0, 0, 0, 0),
-            BackgroundTransparency = 1,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            ZIndex = 2,
-            TextSize = 14,
-        }) Items["Text"]:AddToTheme({TextColor3 = "Text"})
-
-        Items["Value"] = Instances:Create("TextLabel", {
-            Parent = Items["Slider"].Instance,
-            Name = "\0",
-            FontFace = Library.Font,
-            TextColor3 = Library.Theme.Accent,
-            Text = tostring(SliderItem.Default) .. SliderItem.Suffix,
-            Size = UDim2New(0, 70, 0, 20),
-            Position = UDim2New(1, -70, 0, 0),
-            BackgroundTransparency = 1,
-            TextXAlignment = Enum.TextXAlignment.Right,
-            ZIndex = 2,
-            TextSize = 13,
-        }) Items["Value"]:AddToTheme({TextColor3 = "Accent"})
-
-        Items["BarBG"] = Instances:Create("Frame", {
-            Parent = Items["Slider"].Instance,
-            Name = "\0",
-            Size = UDim2New(1, -20, 0, 4),
-            Position = UDim2New(0, 10, 0, 28),
-            BackgroundColor3 = FromRGB(40, 40, 50),
-            BorderSizePixel = 0,
-            ZIndex = 2
-        })
-        Instances:Create("UICorner", { Parent = Items["BarBG"].Instance, CornerRadius = UDimNew(1, 0) })
-
-        Items["BarFill"] = Instances:Create("Frame", {
-            Parent = Items["BarBG"].Instance,
-            Name = "\0",
-            Size = UDim2New(0, 0, 1, 0),
-            BackgroundColor3 = Library.Theme.Accent,
-            BorderSizePixel = 0,
-            ZIndex = 3
-        })
-        Instances:Create("UICorner", { Parent = Items["BarFill"].Instance, CornerRadius = UDimNew(1, 0) })
-
-        Items["Dragger"] = Instances:Create("TextButton", {
-            Parent = Items["BarBG"].Instance,
-            Name = "\0",
-            Size = UDim2New(0, 12, 0, 12),
-            Position = UDim2New(0, -6, 0, -4),
-            BackgroundColor3 = Library.Theme.Text,
-            BorderSizePixel = 0,
-            Text = "",
-            AutoButtonColor = false,
-            ZIndex = 4
-        })
-        Items["Dragger"]:AddToTheme({BackgroundColor3 = "Text"})
-        Instances:Create("UICorner", { Parent = Items["Dragger"].Instance, CornerRadius = UDimNew(1, 0) })
-    end
-
-    local function UpdateValue(NewValue)
-        SliderItem.Value = MathClamp(NewValue, SliderItem.Min, SliderItem.Max)
-        local Percent = (SliderItem.Value - SliderItem.Min) / (SliderItem.Max - SliderItem.Min)
-        Items["BarFill"].Instance.Size = UDim2New(Percent, 0, 1, 0)
-        Items["Dragger"].Instance.Position = UDim2New(Percent, -6, 0, -4)
-        Items["Value"].Instance.Text = tostring(math.floor(SliderItem.Value)) .. SliderItem.Suffix
-        Library.Flags[SliderItem.Flag] = SliderItem.Value
-        Library:SafeCall(SliderItem.Callback, SliderItem.Value)
-    end
-
-    UpdateValue(SliderItem.Default)
-
-    local Dragging = false
-    Items["Dragger"]:Connect("InputBegan", function(Input)
-        if Input.UserInputType == Enum.UserInputType.MouseButton1 then
-            Dragging = true
-        end
-    end)
-
-    Library:Connect(UserInputService.InputChanged, function(Input)
-        if Dragging and Input.UserInputType == Enum.UserInputType.MouseMovement then
-            local MousePos = Input.Position.X
-            local BarPos = Items["BarBG"].Instance.AbsolutePosition.X
-            local BarWidth = Items["BarBG"].Instance.AbsoluteSize.X
-            local Percent = MathClamp((MousePos - BarPos) / BarWidth, 0, 1)
-            local NewValue = SliderItem.Min + (SliderItem.Max - SliderItem.Min) * Percent
-            UpdateValue(NewValue)
-        end
-    end)
-
-    Library:Connect(UserInputService.InputEnded, function(Input)
-        if Input.UserInputType == Enum.UserInputType.MouseButton1 then
-            Dragging = false
-        end
-    end)
-
-    function SliderItem:Set(Value)
-        UpdateValue(Value)
-    end
-
-    function SliderItem:Get()
-        return SliderItem.Value
-    end
-
-    Library.SetFlags[SliderItem.Flag] = function(Value)
-        SliderItem:Set(Value)
-    end
-
-    SliderItem.Section.Elements[#SliderItem.Section.Elements + 1] = SliderItem
-    return SliderItem
-end
-
--- ==================== SWITCH (CORREGIDO) ====================
-Library.Sections.Switch = function(self, Data)
-    Data = Data or {}
-
-    local SwitchItem = {
-        Window = self.Window,
-        Page = self.Page,
-        Section = self,
-        Name = Data.Name or "Switch",
-        Flag = Data.Flag or Library:NextFlag(),
-        Default = Data.Default or false,
-        Callback = Data.Callback or function() end,
-        Value = nil
-    }
-
-    local Items = {} do
-        Items["Switch"] = Instances:Create("Frame", {
-            Parent = SwitchItem.Section.Items["Content"].Instance,
-            Name = "\0",
-            BackgroundTransparency = 1,
-            Size = UDim2New(1, 0, 0, 30),
-            BorderSizePixel = 0,
-            BackgroundColor3 = FromRGB(255, 255, 255)
-        })
-
-        Items["Text"] = Instances:Create("TextLabel", {
-            Parent = Items["Switch"].Instance,
-            Name = "\0",
-            FontFace = Library.Font,
-            TextColor3 = FromRGB(240, 240, 240),
-            Text = SwitchItem.Name,
-            Size = UDim2New(1, -60, 0, 30),
-            Position = UDim2New(0, 0, 0, 0),
-            BackgroundTransparency = 1,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            ZIndex = 2,
-            TextSize = 14,
-        }) Items["Text"]:AddToTheme({TextColor3 = "Text"})
-
-        Items["SwitchBG"] = Instances:Create("TextButton", {
-            Parent = Items["Switch"].Instance,
-            Name = "\0",
-            Size = UDim2New(0, 44, 0, 24),
-            Position = UDim2New(1, -54, 0, 3),
-            BackgroundColor3 = FromRGB(60, 60, 70),
-            BorderSizePixel = 0,
-            AutoButtonColor = false,
-            Text = "",
-            ZIndex = 2
-        })
-        Items["SwitchBG"]:AddToTheme({BackgroundColor3 = "Element"})
-        Instances:Create("UICorner", { Parent = Items["SwitchBG"].Instance, CornerRadius = UDimNew(1, 0) })
-
-        Items["SwitchKnob"] = Instances:Create("Frame", {
-            Parent = Items["SwitchBG"].Instance,
-            Name = "\0",
-            Size = UDim2New(0, 20, 0, 20),
-            Position = UDim2New(0, 2, 0, 2),
-            BackgroundColor3 = Library.Theme.Text,
-            BorderSizePixel = 0,
-            ZIndex = 3
-        })
-        Items["SwitchKnob"]:AddToTheme({BackgroundColor3 = "Text"})
-        Instances:Create("UICorner", { Parent = Items["SwitchKnob"].Instance, CornerRadius = UDimNew(1, 0) })
-    end
-
-    local function UpdateState(State)
-        SwitchItem.Value = State
-        if State then
-            Items["SwitchBG"]:Tween(nil, {BackgroundColor3 = Library.Theme.Accent})
-            Items["SwitchKnob"]:Tween(nil, {Position = UDim2New(1, -22, 0, 2)})
-        else
-            Items["SwitchBG"]:Tween(nil, {BackgroundColor3 = FromRGB(60, 60, 70)})
-            Items["SwitchKnob"]:Tween(nil, {Position = UDim2New(0, 2, 0, 2)})
-        end
-        Library.Flags[SwitchItem.Flag] = State
-        Library:SafeCall(SwitchItem.Callback, State)
-    end
-
-    UpdateState(SwitchItem.Default)
-
-    -- CLICK FUNCIONA AHORA
-    Items["SwitchBG"]:Connect("MouseButton1Down", function()
-        UpdateState(not SwitchItem.Value)
-    end)
-
-    function SwitchItem:Set(State)
-        UpdateState(State)
-    end
-
-    function SwitchItem:Get()
-        return SwitchItem.Value
-    end
-
-    Library.SetFlags[SwitchItem.Flag] = function(Value)
-        SwitchItem:Set(Value)
-    end
-
-    SwitchItem.Section.Elements[#SwitchItem.Section.Elements + 1] = SwitchItem
-    return SwitchItem
-end
     end
 
     Library.CreateSettingsPage = function(self, Window, KeybindList)

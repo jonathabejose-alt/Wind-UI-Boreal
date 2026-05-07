@@ -9385,6 +9385,12 @@ Library.KeySystem = function(self, Data)
 
     return KeySystem
    end
+-- Contar conexiones activas
+local totalConnections = #Library.Connections
+local totalThreads = #Library.Threads
+print("📊 Conexiones activas: " .. totalConnections)
+print("📊 Threads activos: " .. totalThreads)
+print("📊 ThemeItems: " .. #Library.ThemeItems)
 end
 
 getgenv().Library = Library

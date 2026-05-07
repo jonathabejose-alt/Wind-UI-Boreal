@@ -1056,8 +1056,8 @@ Library.FadeSpeed = 0.1
         -- Добавляем в список на удаление
         table.insert(self.ToClean, DepthOfField.Instance)
 
-        Library:Connect(RunService.RenderStepped, function()
-            if Window.IsOpen then
+        Library:Connect(RunService.Heartbeat, function()
+    if Window.IsOpen and Window.BlurEnabled then
                 if Item.Visible then
                     DepthOfField:Tween(nil, {NearIntensity = 1})
 

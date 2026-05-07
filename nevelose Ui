@@ -674,8 +674,9 @@ local Library do
         }
 
         Library.Font = SemiBold
+    end
 
-Library.Holder = Instances:Create("ScreenGui", {
+    Library.Holder = Instances:Create("ScreenGui", {
         Parent = gethui(),
         Name = "\0",
         ZIndexBehavior = Enum.ZIndexBehavior.Global,
@@ -3417,11 +3418,12 @@ Library.Holder = Instances:Create("ScreenGui", {
                 end
             end
 
-Library:Connect(UserInputService.InputBegan, function(Input)
-    if tostring(Input.KeyCode) == Library.MenuKeybind or tostring(Input.UserInputType) == Library.MenuKeybind then
-        Window:SetOpen(not Window.IsOpen)
-    end
-end)
+            Library:Connect(UserInputService.InputBegan, function(Input)
+                if tostring(Input.KeyCode) == Library.MenuKeybind or tostring(Input.UserInputType) == Library.MenuKeybind then
+                    Window:SetOpen(not Window.IsOpen)
+                end
+            end)
+
             Window:SetCenter()
             task.wait()
             Window:SetOpen(true)
@@ -4792,14 +4794,14 @@ end)
                 end
             end)
 
-function Section:TweenElements(Bool, Debounce)
-    for Index, Value in Section.Elements do
-        Value:RefreshPosition(Bool)
-        if not Debounce then 
-            task.wait(0.03)
-        end
-    end
-end
+            function Section:TweenElements(Bool, Debounce)
+                for Index, Value in Section.Elements do
+                    Value:RefreshPosition(Bool)
+                    if not Debounce then 
+                        task.wait(0.03)
+                    end
+                end
+            end
 
             Items["Toggle"]:Connect("MouseButton1Down", function()
                 Section:ToggleBackground()
@@ -7661,7 +7663,7 @@ end
         return Page
     end
 
--- ==================== SWITCH ====================
+-- ==================== ELEMENTO 1: SWITCH ====================
 Library.Sections.Switch = function(self, Data)
     Data = Data or {}
     local SwitchItem = {
@@ -7693,9 +7695,9 @@ Library.Sections.Switch = function(self, Data)
     Library.SetFlags[SwitchItem.Flag] = function(Value) SwitchItem:Set(Value) end
     SwitchItem.Section.Elements[#SwitchItem.Section.Elements + 1] = SwitchItem
     return SwitchItem
- end
+end
 
--- ==================== NUMBERSLIDER ====================
+-- ==================== ELEMENTO 2: NUMBERSLIDER ====================
 Library.Sections.NumberSlider = function(self, Data)
     Data = Data or {}
     local Slider = {
@@ -7742,9 +7744,9 @@ Library.Sections.NumberSlider = function(self, Data)
     Library.SetFlags[Slider.Flag] = function(Val) Slider:Set(Val) end
     Slider.Section.Elements[#Slider.Section.Elements + 1] = Slider
     return Slider
-   end
+end
 
--- ==================== CODE ====================
+-- ==================== ELEMENTO 3: CODE ====================
 Library.Sections.Code = function(self, Data)
     Data = Data or {}
     local CodeItem = {
@@ -7777,7 +7779,7 @@ Library.Sections.Code = function(self, Data)
     return CodeItem
 end
 
--- ==================== STEPPER ====================
+-- ==================== ELEMENTO 4: STEPPER ====================
 Library.Sections.Stepper = function(self, Data)
     Data = Data or {}
     local Stepper = {
@@ -7815,7 +7817,7 @@ Library.Sections.Stepper = function(self, Data)
     return Stepper
 end
 
--- ==================== STATS ====================
+-- ==================== ELEMENTO 5: STATS ====================
 Library.Sections.Stats = function(self, Data)
     Data = Data or {}
     local StatsItem = {
@@ -7851,7 +7853,7 @@ Library.Sections.Stats = function(self, Data)
     return StatsItem
 end
 
--- ==================== GROUP ====================
+-- ==================== ELEMENTO 6: GROUP ====================
 Library.Sections.Group = function(self, Data)
     Data = Data or {}
     local GroupItem = {
@@ -7877,7 +7879,7 @@ Library.Sections.Group = function(self, Data)
     return GroupItem
 end
 
--- ==================== PARAGRAPH (SOLO TEXTO) ====================
+-- ==================== ELEMENTO 7: PARAGRAPH ====================
 Library.Sections.Paragraph = function(self, Data)
     Data = Data or {}
     local ParaItem = {
@@ -7885,49 +7887,17 @@ Library.Sections.Paragraph = function(self, Data)
         Title = Data.Title or "", Desc = Data.Desc or ""
     }
     local Items = {} do
-        Items["Container"] = Instances:Create("Frame", { 
-            Parent = ParaItem.Section.Items["Content"].Instance, 
-            BackgroundTransparency = 1, 
-            Size = UDim2New(1, 0, 0, 0), 
-            AutomaticSize = Enum.AutomaticSize.Y, 
-            BorderSizePixel = 0 
-        })
-        Items["Title"] = Instances:Create("TextLabel", { 
-            Parent = Items["Container"].Instance, 
-            FontFace = Library.Font, 
-            TextColor3 = FromRGB(240, 240, 240), 
-            Text = ParaItem.Title, 
-            AutomaticSize = Enum.AutomaticSize.X, 
-            Size = UDim2New(0, 0, 0, 15), 
-            BackgroundTransparency = 1, 
-            TextXAlignment = Enum.TextXAlignment.Left, 
-            TextSize = 14, 
-            ZIndex = 2 
-        })
+        Items["Container"] = Instances:Create("Frame", { Parent = ParaItem.Section.Items["Content"].Instance, BackgroundTransparency = 1, Size = UDim2New(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BorderSizePixel = 0 })
+        Items["Title"] = Instances:Create("TextLabel", { Parent = Items["Container"].Instance, FontFace = Library.Font, TextColor3 = FromRGB(240, 240, 240), Text = ParaItem.Title, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2New(0, 0, 0, 15), BackgroundTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, TextSize = 14, ZIndex = 2 })
         Items["Title"]:AddToTheme({TextColor3 = "Text"})
-        
-        Items["Desc"] = Instances:Create("TextLabel", { 
-            Parent = Items["Container"].Instance, 
-            FontFace = Library.Font, 
-            TextColor3 = FromRGB(180, 180, 180), 
-            Text = ParaItem.Desc, 
-            Size = UDim2New(1, 0, 0, 0), 
-            Position = UDim2New(0, 0, 0, 22), 
-            BackgroundTransparency = 1, 
-            TextXAlignment = Enum.TextXAlignment.Left, 
-            TextSize = 12, 
-            TextWrapped = true, 
-            AutomaticSize = Enum.AutomaticSize.Y, 
-            ZIndex = 2 
-        })
+        Items["Desc"] = Instances:Create("TextLabel", { Parent = Items["Container"].Instance, FontFace = Library.Font, TextColor3 = FromRGB(180, 180, 180), Text = ParaItem.Desc, Size = UDim2New(1, 0, 0, 0), Position = UDim2New(0, 0, 0, 22), BackgroundTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, TextSize = 12, TextWrapped = true, AutomaticSize = Enum.AutomaticSize.Y, ZIndex = 2 })
         Items["Desc"]:AddToTheme({TextColor3 = "Text"})
     end
-    
     ParaItem.Section.Elements[#ParaItem.Section.Elements + 1] = ParaItem
     return ParaItem
 end
 
--- ==================== PROGRESS ====================
+-- ==================== ELEMENTO 8: PROGRESS ====================
 Library.Sections.Progress = function(self, Data)
     Data = Data or {}
     local ProgItem = {
@@ -7960,7 +7930,7 @@ Library.Sections.Progress = function(self, Data)
     function ProgItem:Get() return ProgItem.Value end
     ProgItem.Section.Elements[#ProgItem.Section.Elements + 1] = ProgItem
     return ProgItem
-  end
+   end
 end
 
 getgenv().Library = Library

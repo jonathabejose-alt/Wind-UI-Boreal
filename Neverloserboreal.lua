@@ -8772,7 +8772,6 @@ Library.Sections.Switch = function(self, Data)
     SwitchItem.Section.Elements[#SwitchItem.Section.Elements + 1] = SwitchItem
     return SwitchItem
 end
-    end
 
     Library.CreateSettingsPage = function(self, Window, KeybindList)
         local Page = Window:Page({Name = "Settings", Icon = "122669828593160"})

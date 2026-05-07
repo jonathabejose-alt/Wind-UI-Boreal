@@ -7553,6 +7553,773 @@ end
             Dropdown.Section.Elements[#Dropdown.Section.Elements+1] = Dropdown
             return Dropdown
         end
+
+		Library.Sections.Paragraph = function(self, Data)
+    Data = Data or {}
+
+    local Paragraph = {
+        Window = self.Window,
+        Page = self.Page,
+        Section = self,
+        Title = Data.Title or Data.title or "Paragraph",
+        Desc = Data.Desc or Data.desc or ""
+    }
+
+    local Items = {} do
+        Items["Paragraph"] = Instances:Create("Frame", {
+            Parent = Paragraph.Section.Items["Content"].Instance,
+            Name = "\0",
+            BackgroundTransparency = 1,
+            Size = UDim2New(1, 0, 0, 0),
+            BorderSizePixel = 0,
+            AutomaticSize = Enum.AutomaticSize.Y,
+            BackgroundColor3 = FromRGB(255, 255, 255)
+        })
+
+        Items["Title"] = Instances:Create("TextLabel", {
+            Parent = Items["Paragraph"].Instance,
+            Name = "\0",
+            FontFace = Library.Font,
+            TextColor3 = FromRGB(240, 240, 240),
+            Text = Paragraph.Title,
+            AutomaticSize = Enum.AutomaticSize.Y,
+            Size = UDim2New(1, 0, 0, 15),
+            BackgroundTransparency = 1,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextWrapped = true,
+            BorderSizePixel = 0,
+            ZIndex = 2,
+            TextSize = 14,
+            BackgroundColor3 = FromRGB(255, 255, 255)
+        }) Items["Title"]:AddToTheme({TextColor3 = "Text"})
+
+        Items["Desc"] = Instances:Create("TextLabel", {
+            Parent = Items["Paragraph"].Instance,
+            Name = "\0",
+            FontFace = Library.Font,
+            TextColor3 = FromRGB(240, 240, 240),
+            TextTransparency = 0.4,
+            Text = Paragraph.Desc,
+            AutomaticSize = Enum.AutomaticSize.Y,
+            Size = UDim2New(1, 0, 0, 0),
+            Position = UDim2New(0, 0, 0, 18),
+            BackgroundTransparency = 1,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextWrapped = true,
+            BorderSizePixel = 0,
+            ZIndex = 2,
+            TextSize = 13,
+            BackgroundColor3 = FromRGB(255, 255, 255)
+        }) Items["Desc"]:AddToTheme({TextColor3 = "Text"})
+
+        Instances:Create("UIPadding", {
+            Parent = Items["Paragraph"].Instance,
+            Name = "\0",
+            PaddingBottom = UDimNew(0, 5)
+        })
+    end
+
+    function Paragraph:SetTitle(Text)
+        Items["Title"].Instance.Text = tostring(Text)
+    end
+
+    function Paragraph:SetDesc(Text)
+        Items["Desc"].Instance.Text = tostring(Text)
+    end
+
+    function Paragraph:RefreshPosition(Bool)
+        if Bool then
+            Items["Title"]:Tween(TweenInfo.new(1, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position = UDim2New(0, 0, 0, 0)})
+        else
+            Items["Title"].Instance.Position = UDim2New(0, 30, 0, 0)
+        end
+    end
+
+    Paragraph.Section.Elements[#Paragraph.Section.Elements+1] = Paragraph
+    return Paragraph
+end
+
+Library.Sections.Stepper = function(self, Data)
+    Data = Data or {}
+
+    local Stepper = {
+        Window = self.Window,
+        Page = self.Page,
+        Section = self,
+        Name = Data.Name or Data.name or "Stepper",
+        Flag = Data.Flag or Data.flag or Library:NextFlag(),
+        Min = (Data.Value and Data.Value.Min) or Data.Min or 0,
+        Max = (Data.Value and Data.Value.Max) or Data.Max or 10,
+        Default = (Data.Value and Data.Value.Default) or Data.Default or 0,
+        Step = Data.Step or Data.step or 1,
+        Suffix = Data.Suffix or Data.suffix or "",
+        Callback = Data.Callback or Data.callback or function() end,
+        Value = 0
+    }
+
+    local Items = {} do
+        Items["Stepper"] = Instances:Create("Frame", {
+            Parent = Stepper.Section.Items["Content"].Instance,
+            Name = "\0",
+            BackgroundTransparency = 1,
+            Size = UDim2New(1, 0, 0, 25),
+            BorderSizePixel = 0,
+            BackgroundColor3 = FromRGB(255, 255, 255)
+        })
+
+        Items["Text"] = Instances:Create("TextLabel", {
+            Parent = Items["Stepper"].Instance,
+            Name = "\0",
+            FontFace = Library.Font,
+            TextColor3 = FromRGB(240, 240, 240),
+            TextTransparency = 0.3,
+            Text = Stepper.Name,
+            AutomaticSize = Enum.AutomaticSize.X,
+            Size = UDim2New(0, 0, 0, 15),
+            AnchorPoint = Vector2New(0, 0.5),
+            Position = UDim2New(0, 0, 0.5, 0),
+            BackgroundTransparency = 1,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            BorderSizePixel = 0,
+            ZIndex = 2,
+            TextSize = 14,
+            BackgroundColor3 = FromRGB(255, 255, 255)
+        }) Items["Text"]:AddToTheme({TextColor3 = "Text"})
+
+        Items["Container"] = Instances:Create("Frame", {
+            Parent = Items["Stepper"].Instance,
+            Name = "\0",
+            Size = UDim2New(0, 100, 0, 25),
+            AnchorPoint = Vector2New(1, 0.5),
+            Position = UDim2New(1, 0, 0.5, 0),
+            BackgroundColor3 = FromRGB(16, 16, 18),
+            BorderSizePixel = 0,
+            ZIndex = 2
+        }) Items["Container"]:AddToTheme({BackgroundColor3 = "Element"})
+
+        Instances:Create("UICorner", {
+            Parent = Items["Container"].Instance,
+            CornerRadius = UDimNew(0, 5)
+        })
+
+        Items["Minus"] = Instances:Create("TextButton", {
+            Parent = Items["Container"].Instance,
+            Name = "\0",
+            FontFace = Library.Font,
+            Text = "-",
+            TextColor3 = FromRGB(240, 240, 240),
+            Size = UDim2New(0, 25, 1, 0),
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            ZIndex = 3,
+            TextSize = 16,
+            AutoButtonColor = false,
+            BackgroundColor3 = FromRGB(255, 255, 255)
+        }) Items["Minus"]:AddToTheme({TextColor3 = "Text"})
+
+        Items["Plus"] = Instances:Create("TextButton", {
+            Parent = Items["Container"].Instance,
+            Name = "\0",
+            FontFace = Library.Font,
+            Text = "+",
+            TextColor3 = FromRGB(240, 240, 240),
+            AnchorPoint = Vector2New(1, 0),
+            Position = UDim2New(1, 0, 0, 0),
+            Size = UDim2New(0, 25, 1, 0),
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            ZIndex = 3,
+            TextSize = 16,
+            AutoButtonColor = false,
+            BackgroundColor3 = FromRGB(255, 255, 255)
+        }) Items["Plus"]:AddToTheme({TextColor3 = "Text"})
+
+        Items["Value"] = Instances:Create("TextLabel", {
+            Parent = Items["Container"].Instance,
+            Name = "\0",
+            FontFace = Library.Font,
+            TextColor3 = FromRGB(240, 240, 240),
+            Text = "0",
+            AnchorPoint = Vector2New(0.5, 0.5),
+            Position = UDim2New(0.5, 0, 0.5, 0),
+            Size = UDim2New(0, 50, 1, 0),
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            ZIndex = 3,
+            TextSize = 14,
+            BackgroundColor3 = FromRGB(255, 255, 255)
+        }) Items["Value"]:AddToTheme({TextColor3 = "Text"})
+    end
+
+    function Stepper:Set(Value)
+        Stepper.Value = MathClamp(Value, Stepper.Min, Stepper.Max)
+        Library.Flags[Stepper.Flag] = Stepper.Value
+        Items["Value"].Instance.Text = tostring(Stepper.Value) .. Stepper.Suffix
+        if Stepper.Callback then
+            Library:SafeCall(Stepper.Callback, Stepper.Value)
+        end
+    end
+
+    function Stepper:Get()
+        return Stepper.Value
+    end
+
+    function Stepper:RefreshPosition(Bool)
+        if Bool then
+            Items["Text"]:Tween(TweenInfo.new(1, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position = UDim2New(0, 0, 0.5, 0)})
+            Items["Container"]:Tween(TweenInfo.new(1, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position = UDim2New(1, 0, 0.5, 0)})
+        else
+            Items["Text"].Instance.Position = UDim2New(0, 30, 0.5, 0)
+            Items["Container"].Instance.Position = UDim2New(1, 30, 0.5, 0)
+        end
+    end
+
+    Items["Minus"]:Connect("MouseButton1Down", function()
+        Stepper:Set(Stepper.Value - Stepper.Step)
+    end)
+
+    Items["Plus"]:Connect("MouseButton1Down", function()
+        Stepper:Set(Stepper.Value + Stepper.Step)
+    end)
+
+    Stepper:Set(Stepper.Default)
+
+    Library.SetFlags[Stepper.Flag] = function(Value)
+        Stepper:Set(Value)
+    end
+
+    Stepper.Section.Elements[#Stepper.Section.Elements+1] = Stepper
+    return Stepper
+end
+
+Library.Sections.Progress = function(self, Data)
+    Data = Data or {}
+
+    local Progress = {
+        Window = self.Window,
+        Page = self.Page,
+        Section = self,
+        Name = Data.Name or Data.name or "Progress",
+        Min = (Data.Value and Data.Value.Min) or Data.Min or 0,
+        Max = (Data.Value and Data.Value.Max) or Data.Max or 100,
+        Default = (Data.Value and Data.Value.Default) or Data.Default or 0,
+        Suffix = Data.Suffix or Data.suffix or "",
+        Value = 0
+    }
+
+    local Items = {} do
+        Items["Progress"] = Instances:Create("Frame", {
+            Parent = Progress.Section.Items["Content"].Instance,
+            Name = "\0",
+            BackgroundTransparency = 1,
+            Size = UDim2New(1, 0, 0, 35),
+            BorderSizePixel = 0,
+            BackgroundColor3 = FromRGB(255, 255, 255)
+        })
+
+        Items["Text"] = Instances:Create("TextLabel", {
+            Parent = Items["Progress"].Instance,
+            Name = "\0",
+            FontFace = Library.Font,
+            TextColor3 = FromRGB(240, 240, 240),
+            TextTransparency = 0.3,
+            Text = Progress.Name,
+            AutomaticSize = Enum.AutomaticSize.X,
+            Size = UDim2New(0, 0, 0, 15),
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            ZIndex = 2,
+            TextSize = 14,
+            BackgroundColor3 = FromRGB(255, 255, 255)
+        }) Items["Text"]:AddToTheme({TextColor3 = "Text"})
+
+        Items["Bar"] = Instances:Create("Frame", {
+            Parent = Items["Progress"].Instance,
+            Name = "\0",
+            Size = UDim2New(1, 0, 0, 7),
+            AnchorPoint = Vector2New(0, 1),
+            Position = UDim2New(0, 0, 1, -3),
+            BackgroundColor3 = FromRGB(16, 16, 18),
+            BorderSizePixel = 0,
+            ZIndex = 2
+        }) Items["Bar"]:AddToTheme({BackgroundColor3 = "Element"})
+
+        Instances:Create("UICorner", {
+            Parent = Items["Bar"].Instance,
+            CornerRadius = UDimNew(1, 0)
+        })
+
+        Items["Fill"] = Instances:Create("Frame", {
+            Parent = Items["Bar"].Instance,
+            Name = "\0",
+            Size = UDim2New(0, 0, 1, 0),
+            BackgroundColor3 = FromRGB(255, 255, 255),
+            BorderSizePixel = 0,
+            ZIndex = 3
+        })
+
+        Instances:Create("UICorner", {
+            Parent = Items["Fill"].Instance,
+            CornerRadius = UDimNew(1, 0)
+        })
+
+        Instances:Create("UIGradient", {
+            Parent = Items["Fill"].Instance,
+            Name = "\0",
+            Rotation = -102,
+            Color = RGBSequence{RGBSequenceKeypoint(0, FromRGB(255, 255, 255)), RGBSequenceKeypoint(1, FromRGB(166, 166, 166))}
+        }):AddToTheme({Color = function()
+            return RGBSequence{RGBSequenceKeypoint(0, Library.Theme.Accent), RGBSequenceKeypoint(1, Library.Theme.AccentGradient)}
+        end})
+
+        Items["ValueLabel"] = Instances:Create("TextLabel", {
+            Parent = Items["Progress"].Instance,
+            Name = "\0",
+            FontFace = Library.Font,
+            TextColor3 = FromRGB(240, 240, 240),
+            TextTransparency = 0.3,
+            Text = "0",
+            AutomaticSize = Enum.AutomaticSize.X,
+            Size = UDim2New(0, 0, 0, 15),
+            AnchorPoint = Vector2New(1, 0),
+            Position = UDim2New(1, 0, 0, 0),
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            ZIndex = 2,
+            TextSize = 14,
+            BackgroundColor3 = FromRGB(255, 255, 255)
+        }) Items["ValueLabel"]:AddToTheme({TextColor3 = "Text"})
+    end
+
+    function Progress:Set(Value)
+        Progress.Value = MathClamp(Value, Progress.Min, Progress.Max)
+        local Percent = (Progress.Value - Progress.Min) / (Progress.Max - Progress.Min)
+        Items["Fill"]:Tween(TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2New(Percent, 0, 1, 0)})
+        Items["ValueLabel"].Instance.Text = tostring(Progress.Value) .. Progress.Suffix
+    end
+
+    function Progress:Get()
+        return Progress.Value
+    end
+
+    function Progress:RefreshPosition(Bool)
+        if Bool then
+            Items["Text"]:Tween(TweenInfo.new(1, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position = UDim2New(0, 0, 0, 0)})
+        else
+            Items["Text"].Instance.Position = UDim2New(0, 30, 0, 0)
+        end
+    end
+
+    Progress:Set(Progress.Default)
+    Progress.Section.Elements[#Progress.Section.Elements+1] = Progress
+    return Progress
+end
+
+Library.Sections.Stats = function(self, Data)
+    Data = Data or {}
+
+    local Stats = {
+        Window = self.Window,
+        Page = self.Page,
+        Section = self,
+        Name = Data.Name or Data.name or "Stats",
+        Items = Data.Items or {},
+        StatItems = {}
+    }
+
+    local Container = Instances:Create("Frame", {
+        Parent = Stats.Section.Items["Content"].Instance,
+        Name = "\0",
+        BackgroundTransparency = 1,
+        Size = UDim2New(1, 0, 0, 0),
+        BorderSizePixel = 0,
+        AutomaticSize = Enum.AutomaticSize.Y,
+        BackgroundColor3 = FromRGB(255, 255, 255)
+    })
+
+    Instances:Create("UIListLayout", {
+        Parent = Container.Instance,
+        Name = "\0",
+        Padding = UDimNew(0, 3),
+        SortOrder = Enum.SortOrder.LayoutOrder
+    })
+
+    for _, Item in ipairs(Stats.Items) do
+        local Row = Instances:Create("Frame", {
+            Parent = Container.Instance,
+            Name = "\0",
+            BackgroundTransparency = 1,
+            Size = UDim2New(1, 0, 0, 18),
+            BorderSizePixel = 0,
+            BackgroundColor3 = FromRGB(255, 255, 255)
+        })
+
+        local KeyLabel = Instances:Create("TextLabel", {
+            Parent = Row.Instance,
+            Name = "\0",
+            FontFace = Library.Font,
+            TextColor3 = FromRGB(240, 240, 240),
+            TextTransparency = 0.5,
+            Text = tostring(Item.Key),
+            AutomaticSize = Enum.AutomaticSize.X,
+            Size = UDim2New(0, 0, 1, 0),
+            BackgroundTransparency = 1,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            BorderSizePixel = 0,
+            ZIndex = 2,
+            TextSize = 13,
+            BackgroundColor3 = FromRGB(255, 255, 255)
+        }) KeyLabel:AddToTheme({TextColor3 = "Text"})
+
+        local ValueLabel = Instances:Create("TextLabel", {
+            Parent = Row.Instance,
+            Name = "\0",
+            FontFace = Library.Font,
+            TextColor3 = FromRGB(240, 240, 240),
+            TextTransparency = 0.3,
+            Text = tostring(Item.Value),
+            AutomaticSize = Enum.AutomaticSize.X,
+            Size = UDim2New(0, 0, 1, 0),
+            AnchorPoint = Vector2New(1, 0),
+            Position = UDim2New(1, 0, 0, 0),
+            BackgroundTransparency = 1,
+            TextXAlignment = Enum.TextXAlignment.Right,
+            BorderSizePixel = 0,
+            ZIndex = 2,
+            TextSize = 13,
+            BackgroundColor3 = FromRGB(255, 255, 255)
+        }) ValueLabel:AddToTheme({TextColor3 = "Text"})
+
+        Stats.StatItems[Item.Key] = ValueLabel
+    end
+
+    function Stats:Update(Key, Value)
+        local Label = Stats.StatItems[Key]
+        if Label then
+            Label.Instance.Text = tostring(Value)
+        end
+    end
+
+    function Stats:RefreshPosition(Bool) end
+
+    Stats.Section.Elements[#Stats.Section.Elements+1] = Stats
+    return Stats
+end
+
+Library.Sections.Group = function(self, Data)
+    Data = Data or {}
+
+    local Group = {
+        Window = self.Window,
+        Page = self.Page,
+        Section = self,
+        Elements = {}
+    }
+
+    local Container = Instances:Create("Frame", {
+        Parent = Group.Section.Items["Content"].Instance,
+        Name = "\0",
+        BackgroundTransparency = 1,
+        Size = UDim2New(1, 0, 0, 32),
+        BorderSizePixel = 0,
+        BackgroundColor3 = FromRGB(255, 255, 255)
+    })
+
+    Instances:Create("UIListLayout", {
+        Parent = Container.Instance,
+        Name = "\0",
+        FillDirection = Enum.FillDirection.Horizontal,
+        Padding = UDimNew(0, 5),
+        SortOrder = Enum.SortOrder.LayoutOrder
+    })
+
+    function Group:Button(BData)
+        BData = BData or {}
+
+        local Btn = Instances:Create("TextButton", {
+            Parent = Container.Instance,
+            Name = "\0",
+            FontFace = Library.Font,
+            Text = "",
+            AutoButtonColor = false,
+            Size = UDim2New(0, 0, 1, 0),
+            AutomaticSize = Enum.AutomaticSize.X,
+            BorderSizePixel = 0,
+            ZIndex = 2,
+            BackgroundColor3 = FromRGB(16, 16, 18)
+        }) Btn:AddToTheme({BackgroundColor3 = "Element"})
+
+        Instances:Create("UICorner", {
+            Parent = Btn.Instance,
+            CornerRadius = UDimNew(0, 5)
+        })
+
+        Instances:Create("UIPadding", {
+            Parent = Btn.Instance,
+            PaddingLeft = UDimNew(0, 10),
+            PaddingRight = UDimNew(0, 10)
+        })
+
+        local BtnText = Instances:Create("TextLabel", {
+            Parent = Btn.Instance,
+            Name = "\0",
+            FontFace = Library.Font,
+            TextColor3 = FromRGB(240, 240, 240),
+            TextTransparency = 0.3,
+            Text = BData.Name or BData.Title or "Button",
+            AutomaticSize = Enum.AutomaticSize.X,
+            Size = UDim2New(0, 0, 1, 0),
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            ZIndex = 3,
+            TextSize = 14,
+            BackgroundColor3 = FromRGB(255, 255, 255)
+        }) BtnText:AddToTheme({TextColor3 = "Text"})
+
+        local Accent = Instances:Create("Frame", {
+            Parent = Btn.Instance,
+            Name = "\0",
+            Size = UDim2New(0, 0, 0, 0),
+            AnchorPoint = Vector2New(0.5, 0.5),
+            Position = UDim2New(0.5, 0, 0.5, 0),
+            BackgroundTransparency = 1,
+            BackgroundColor3 = FromRGB(255, 255, 255),
+            BorderSizePixel = 0,
+            ZIndex = 2
+        })
+
+        Instances:Create("UICorner", {
+            Parent = Accent.Instance,
+            CornerRadius = UDimNew(0, 5)
+        })
+
+        Instances:Create("UIGradient", {
+            Parent = Accent.Instance,
+            Rotation = -115,
+            Color = RGBSequence{RGBSequenceKeypoint(0, FromRGB(255, 255, 255)), RGBSequenceKeypoint(1, FromRGB(143, 143, 143))}
+        }):AddToTheme({Color = function()
+            return RGBSequence{RGBSequenceKeypoint(0, Library.Theme.Accent), RGBSequenceKeypoint(1, Library.Theme.AccentGradient)}
+        end})
+
+        Btn:OnHover(function()
+            Accent:Tween(TweenInfo.new(Library.Tween.Time + 0.15, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2New(1, 0, 1, 0), BackgroundTransparency = 0})
+        end)
+        Btn:OnHoverLeave(function()
+            Accent:Tween(TweenInfo.new(Library.Tween.Time + 0.15, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2New(0, 0, 0, 0), BackgroundTransparency = 1})
+        end)
+
+        Btn:Connect("MouseButton1Down", function()
+            if BData.Callback then
+                Library:SafeCall(BData.Callback)
+            end
+        end)
+
+        return Btn
+    end
+
+    function Group:Toggle(TData)
+        TData = TData or {}
+        return Group.Section:Toggle(TData)
+    end
+
+    function Group:RefreshPosition(Bool) end
+
+    Group.Section.Elements[#Group.Section.Elements+1] = Group
+    return Group
+end
+
+Library.Sections.Segmented = function(self, Data)
+    Data = Data or {}
+
+    local Segmented = {
+        Window = self.Window,
+        Page = self.Page,
+        Section = self,
+        Name = Data.Name or Data.name or "Segmented",
+        Flag = Data.Flag or Data.flag or Library:NextFlag(),
+        Options = Data.Options or {},
+        Default = Data.Default or Data.Value or nil,
+        Callback = Data.Callback or Data.callback or function() end,
+        Value = nil
+    }
+
+    local Items = {} do
+        Items["Segmented"] = Instances:Create("Frame", {
+            Parent = Segmented.Section.Items["Content"].Instance,
+            Name = "\0",
+            BackgroundTransparency = 1,
+            Size = UDim2New(1, 0, 0, 25),
+            BorderSizePixel = 0,
+            BackgroundColor3 = FromRGB(255, 255, 255)
+        })
+
+        if Segmented.Name ~= "" then
+            Items["Text"] = Instances:Create("TextLabel", {
+                Parent = Items["Segmented"].Instance,
+                Name = "\0",
+                FontFace = Library.Font,
+                TextColor3 = FromRGB(240, 240, 240),
+                TextTransparency = 0.3,
+                Text = Segmented.Name,
+                AutomaticSize = Enum.AutomaticSize.X,
+                Size = UDim2New(0, 0, 0, 15),
+                AnchorPoint = Vector2New(0, 0.5),
+                Position = UDim2New(0, 0, 0.5, 0),
+                BackgroundTransparency = 1,
+                BorderSizePixel = 0,
+                ZIndex = 2,
+                TextSize = 14,
+                BackgroundColor3 = FromRGB(255, 255, 255)
+            }) Items["Text"]:AddToTheme({TextColor3 = "Text"})
+        end
+
+        Items["Container"] = Instances:Create("Frame", {
+            Parent = Items["Segmented"].Instance,
+            Name = "\0",
+            Size = UDim2New(0, 0, 1, 0),
+            AnchorPoint = Vector2New(1, 0.5),
+            Position = UDim2New(1, 0, 0.5, 0),
+            AutomaticSize = Enum.AutomaticSize.X,
+            BackgroundColor3 = FromRGB(16, 16, 18),
+            BorderSizePixel = 0,
+            ZIndex = 2
+        }) Items["Container"]:AddToTheme({BackgroundColor3 = "Element"})
+
+        Instances:Create("UICorner", {
+            Parent = Items["Container"].Instance,
+            CornerRadius = UDimNew(0, 5)
+        })
+
+        Instances:Create("UIListLayout", {
+            Parent = Items["Container"].Instance,
+            FillDirection = Enum.FillDirection.Horizontal,
+            SortOrder = Enum.SortOrder.LayoutOrder,
+            Padding = UDimNew(0, 2)
+        })
+
+        Instances:Create("UIPadding", {
+            Parent = Items["Container"].Instance,
+            PaddingLeft = UDimNew(0, 2),
+            PaddingRight = UDimNew(0, 2),
+            PaddingTop = UDimNew(0, 2),
+            PaddingBottom = UDimNew(0, 2)
+        })
+    end
+
+    local Buttons = {}
+
+    local function UpdateButtons(SelectedValue)
+        for Value, BtnData in pairs(Buttons) do
+            if Value == SelectedValue then
+                BtnData.Btn:Tween(nil, {BackgroundTransparency = 0})
+                BtnData.Label:Tween(nil, {TextTransparency = 0})
+            else
+                BtnData.Btn:Tween(nil, {BackgroundTransparency = 1})
+                BtnData.Label:Tween(nil, {TextTransparency = 0.4})
+            end
+        end
+    end
+
+    for _, Option in ipairs(Segmented.Options) do
+        local OptionValue = type(Option) == "table" and (Option.Value or Option.Title) or Option
+        local OptionTitle = type(Option) == "table" and Option.Title or tostring(Option)
+
+        local Btn = Instances:Create("TextButton", {
+            Parent = Items["Container"].Instance,
+            Name = "\0",
+            Text = "",
+            AutoButtonColor = false,
+            Size = UDim2New(0, 0, 1, 0),
+            AutomaticSize = Enum.AutomaticSize.X,
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            ZIndex = 3,
+            BackgroundColor3 = FromRGB(255, 255, 255)
+        })
+
+        Instances:Create("UICorner", {
+            Parent = Btn.Instance,
+            CornerRadius = UDimNew(0, 4)
+        })
+
+        Instances:Create("UIGradient", {
+            Parent = Btn.Instance,
+            Rotation = -115,
+            Color = RGBSequence{RGBSequenceKeypoint(0, FromRGB(255, 255, 255)), RGBSequenceKeypoint(1, FromRGB(143, 143, 143))}
+        }):AddToTheme({Color = function()
+            return RGBSequence{RGBSequenceKeypoint(0, Library.Theme.Accent), RGBSequenceKeypoint(1, Library.Theme.AccentGradient)}
+        end})
+
+        Instances:Create("UIPadding", {
+            Parent = Btn.Instance,
+            PaddingLeft = UDimNew(0, 8),
+            PaddingRight = UDimNew(0, 8)
+        })
+
+        local Label = Instances:Create("TextLabel", {
+            Parent = Btn.Instance,
+            Name = "\0",
+            FontFace = Library.Font,
+            TextColor3 = FromRGB(240, 240, 240),
+            TextTransparency = 0.4,
+            Text = OptionTitle,
+            AutomaticSize = Enum.AutomaticSize.X,
+            Size = UDim2New(0, 0, 1, 0),
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            ZIndex = 4,
+            TextSize = 13,
+            BackgroundColor3 = FromRGB(255, 255, 255)
+        }) Label:AddToTheme({TextColor3 = "Text"})
+
+        Buttons[OptionValue] = {Btn = Btn, Label = Label}
+
+        Btn:Connect("MouseButton1Down", function()
+            Segmented:Set(OptionValue)
+        end)
+    end
+
+    function Segmented:Set(Value)
+        Segmented.Value = Value
+        Library.Flags[Segmented.Flag] = Value
+        UpdateButtons(Value)
+        if Segmented.Callback then
+            Library:SafeCall(Segmented.Callback, Value)
+        end
+    end
+
+    function Segmented:Get()
+        return Segmented.Value
+    end
+
+    function Segmented:RefreshPosition(Bool)
+        if Bool then
+            if Items["Text"] then
+                Items["Text"]:Tween(TweenInfo.new(1, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position = UDim2New(0, 0, 0.5, 0)})
+            end
+            Items["Container"]:Tween(TweenInfo.new(1, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position = UDim2New(1, 0, 0.5, 0)})
+        else
+            if Items["Text"] then
+                Items["Text"].Instance.Position = UDim2New(0, 30, 0.5, 0)
+            end
+            Items["Container"].Instance.Position = UDim2New(1, 30, 0.5, 0)
+        end
+    end
+
+    if Segmented.Default then
+        Segmented:Set(Segmented.Default)
+    elseif #Segmented.Options > 0 then
+        local First = Segmented.Options[1]
+        Segmented:Set(type(First) == "table" and (First.Value or First.Title) or First)
+    end
+
+    Library.SetFlags[Segmented.Flag] = function(Value)
+        Segmented:Set(Value)
+    end
+
+    Segmented.Section.Elements[#Segmented.Section.Elements+1] = Segmented
+    return Segmented
+        end
     end
 
     Library.CreateSettingsPage = function(self, Window, KeybindList)

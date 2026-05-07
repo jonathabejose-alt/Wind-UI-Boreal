@@ -707,21 +707,6 @@ Library.Tween.Time = 0.15
 Library.FadeSpeed = 0.1
 
 -- ==================== AQUÍ VA EL HOLDER (FUERA DEL BLOQUE) ====================
-
--- ===== TEST PARA ENCONTRAR EL LAG =====
-local FPS_Start = 0
-local FPS_Count = 0
-
--- Medir FPS antes de cargar
-local OldHeartbeat = RunService.Heartbeat
-RunService.Heartbeat:Connect(function()
-    FPS_Count = FPS_Count + 1
-end)
-
-task.delay(2, function()
-    print("🟢 FPS ANTES de crear UI: " .. FPS_Count/2)
-    FPS_Start = FPS_Count/2
-end)
 					
 Library.Holder = Instances:Create("ScreenGui", {
     Parent = gethui(),
@@ -730,6 +715,15 @@ Library.Holder = Instances:Create("ScreenGui", {
     DisplayOrder = 2,
     ResetOnSpawn = false
 })
+
+	Library.UnusedHolder = Instances:Create("ScreenGui", {
+    Parent = gethui(),
+    Name = "\0",
+    ZIndexBehavior = Enum.ZIndexBehavior.Global,
+    Enabled = false,
+    ResetOnSpawn = false
+})
+
     Library.NotifHolder  = Instances:Create("Frame", {
         Parent = Library.Holder.Instance,
         Name = "\0",
@@ -4841,14 +4835,16 @@ end
                 end
             end)
 
-            function Section:TweenElements(Bool, Debounce)
-                for Index, Value in Section.Elements do
-                    Value:RefreshPosition(Bool)
-                    if not Debounce then 
-                        task.wait(0.03)
-                    end
-                end
-            end
+function Section:TweenElements(Bool, Debounce)
+    for Index, Value in Section.Elements do
+        if Value and Value.RefreshPosition then
+            Value:RefreshPosition(Bool)
+        end
+        if not Debounce then 
+            task.wait(0.03)
+        end
+    end
+end
 
             Items["Toggle"]:Connect("MouseButton1Down", function()
                 Section:ToggleBackground()

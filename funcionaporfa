@@ -563,7 +563,7 @@ local Library do
                 end
             end)
 
-            Library:Connect(RunService.Heartbeat, function()
+            Library:Connect(RunService.RenderStepped, function()
                 if not Resizing or not CurrentSide then 
                     return 
                 end
@@ -675,54 +675,22 @@ local Library do
 
         Library.Font = SemiBold
     end
--- ==================== OPTIMIZACIÓN AGRESIVA ====================
-local HeartbeatCount = 0
-local MAX_HEARTBEATS = 1 -- Solo 1 Heartbeat sin límite
 
-local OldConnect = Library.Connect
-Library.Connect = function(self, Event, Callback, Name)
-    if Event == RunService.Heartbeat then
-        HeartbeatCount = HeartbeatCount + 1
-        if HeartbeatCount > MAX_HEARTBEATS then
-            -- Limitar a solo 5 actualizaciones por segundo
-            local throttle = 0
-            local fn = Callback
-            Callback = function(dt)
-                throttle = throttle + dt
-                if throttle >= 0.2 then -- 5 veces por segundo
-                    throttle = 0
-                    fn(dt)
-                end
-            end
-        end
-    elseif Event == RunService.RenderStepped then
-        -- Bloquear RenderStepped completamente (solo Heartbeat)
-        return {Connection = {Disconnect = function() end}}
-    end
-    return OldConnect(self, Event, Callback, Name)
-end
+    Library.Holder = Instances:Create("ScreenGui", {
+        Parent = gethui(),
+        Name = "\0",
+        ZIndexBehavior = Enum.ZIndexBehavior.Global,
+        DisplayOrder = 2,
+        ResetOnSpawn = false
+    })
 
--- Reducir tiempo de Tweens
-Library.Tween.Time = 0.15
-Library.FadeSpeed = 0.1
-
--- ==================== AQUÍ VA EL HOLDER (FUERA DEL BLOQUE) ====================
-					
-Library.Holder = Instances:Create("ScreenGui", {
-    Parent = gethui(),
-    Name = "\0",
-    ZIndexBehavior = Enum.ZIndexBehavior.Global,
-    DisplayOrder = 2,
-    ResetOnSpawn = false
-})
-
-	Library.UnusedHolder = Instances:Create("ScreenGui", {
-    Parent = gethui(),
-    Name = "\0",
-    ZIndexBehavior = Enum.ZIndexBehavior.Global,
-    Enabled = false,
-    ResetOnSpawn = false
-})
+    Library.UnusedHolder = Instances:Create("ScreenGui", {
+        Parent = gethui(),
+        Name = "\0",
+        ZIndexBehavior = Enum.ZIndexBehavior.Global,
+        Enabled = false,
+        ResetOnSpawn = false
+    })
 
     Library.NotifHolder  = Instances:Create("Frame", {
         Parent = Library.Holder.Instance,
@@ -1025,92 +993,82 @@ Library.Holder = Instances:Create("ScreenGui", {
     end
 
     Library.MakeBlurred = function(self, Item, Window)
-    -- Si el blur no es necesario, salir inmediatamente
-    if not Window.BlurEnabled then return end
-    
-    Item = Item.Instance
-    local BlurItem = Item
+        Item = Item.Instance
+        local BlurItem = Item
 
-    local Part = Instances:Create("Part", {
-        Material = Enum.Material.Glass,
-        Transparency = 1,
-        Reflectance = 1,
-        CastShadow = false,
-        Anchored = true,
-        CanCollide = false,
-        CanQuery = false,
-        CollisionGroup = " ",
-        Size = Vector3New(1, 1, 1) * 0.01,
-        Color = FromRGB(0,0,0),
-        Parent = Camera
-    })
-    table.insert(self.ToClean, Part.Instance)
-
-    local BlockMesh = Instances:Create("BlockMesh", {Parent = Part.Instance})
-
-    local DepthOfField = Instances:Create("DepthOfFieldEffect", {
-        Parent = Lighting,
-        Enabled = true,
-        FarIntensity = 0,
-        FocusDistance = 0,
-        InFocusRadius = 1000,
-        NearIntensity = 1,
-        Name = ""
-    })
-    table.insert(self.ToClean, DepthOfField.Instance)
-
-    -- Variables para limitar actualizaciones
-    local LastBlurUpdate = 0
-    local BLUR_UPDATE_INTERVAL = 0.1 -- Actualizar blur cada 100ms
-    local wasOpen = false
-    local wasVisible = false
-
-    Library:Connect(RunService.Heartbeat, function(dt)
-        LastBlurUpdate = LastBlurUpdate + dt
-        
-        -- Solo actualizar si cambió el estado o pasó el intervalo
-        local isOpen = Window.IsOpen
-        local isVisible = Item.Visible
-        
-        if isOpen ~= wasOpen or isVisible ~= wasVisible or LastBlurUpdate >= BLUR_UPDATE_INTERVAL then
-            LastBlurUpdate = 0
-            wasOpen = isOpen
-            wasVisible = isVisible
+        local Part = Instances:Create("Part", {
+            Material = Enum.Material.Glass,
+            Transparency = 1,
+            Reflectance = 1,
+            CastShadow = false,
+            Anchored = true,
+            CanCollide = false,
+            CanQuery = false,
+            CollisionGroup = " ",
+            Size = Vector3New(1, 1, 1) * 0.01,
+            Color = FromRGB(0,0,0),
+            Parent = Camera
+        })
+        -- Добавляем в список на удаление
+        table.insert(self.ToClean, Part.Instance)
             
-            if isOpen and isVisible then
-                DepthOfField:Tween(nil, {NearIntensity = 1})
-                Part:Tween(nil, {Transparency = 0.97})
-                Part:Tween(nil, {Size = Vector3New(1, 1, 1) * 0.01})
+        local BlockMesh = Instances:Create("BlockMesh", {Parent = Part.Instance})
 
-                local Corner0 = BlurItem.AbsolutePosition
-                local Corner1 = Corner0 + BlurItem.AbsoluteSize
+        local DepthOfField = Instances:Create("DepthOfFieldEffect", {
+            Parent = Lighting,
+            Enabled = true,
+            FarIntensity = 0,
+            FocusDistance = 0,
+            InFocusRadius = 1000,
+            NearIntensity = 1,
+            Name = ""
+        })
+        -- Добавляем в список на удаление
+        table.insert(self.ToClean, DepthOfField.Instance)
 
-                local Ray0 = Camera.ScreenPointToRay(Camera, Corner0.X, Corner0.Y, 1)
-                local Ray1 = Camera.ScreenPointToRay(Camera, Corner1.X, Corner1.Y, 1)
+        Library:Connect(RunService.RenderStepped, function()
+            if Window.IsOpen then
+                if Item.Visible then
+                    DepthOfField:Tween(nil, {NearIntensity = 1})
 
-                local Origin = Camera.CFrame.Position + Camera.CFrame.LookVector * (0.05 - Camera.NearPlaneZ)
-                local Normal = Camera.CFrame.LookVector
+                    Part:Tween(nil, {Transparency = 0.97})
+                    Part:Tween(nil, {Size = Vector3New(1, 1, 1) * 0.01})
 
-                local Position0 = Library:GetCalculatedRayPosition(Origin, Normal, Ray0.Origin, Ray0.Direction)
-                local Position1 = Library:GetCalculatedRayPosition(Origin, Normal, Ray1.Origin, Ray1.Direction)
+                    local Corner0 = BlurItem.AbsolutePosition;
+                    local Corner1 = Corner0 + BlurItem.AbsoluteSize;
+                        
+                    local Ray0 = Camera.ScreenPointToRay(Camera, Corner0.X, Corner0.Y, 1);
+                    local Ray1 = Camera.ScreenPointToRay(Camera, Corner1.X, Corner1.Y, 1);
 
-                Position0 = Camera.CFrame:PointToObjectSpace(Position0)
-                Position1 = Camera.CFrame:PointToObjectSpace(Position1)
+                    local Origin = Camera.CFrame.Position + Camera.CFrame.LookVector * (0.05 - Camera.NearPlaneZ);
 
-                local Size = Position1 - Position0
-                local Center = (Position0 + Position1) / 2
+                    local Normal = Camera.CFrame.LookVector;
 
-                BlockMesh.Instance.Offset = Center
-                BlockMesh.Instance.Scale  = Size / 0.0101
-                Part.Instance.CFrame = Camera.CFrame
+                    local Position0 = Library:GetCalculatedRayPosition(Origin, Normal, Ray0.Origin, Ray0.Direction)
+                    local Position1 = Library:GetCalculatedRayPosition(Origin, Normal, Ray1.Origin, Ray1.Direction)
+
+                    Position0 = Camera.CFrame:PointToObjectSpace(Position0)
+                    Position1 = Camera.CFrame:PointToObjectSpace(Position1)
+
+                    local Size = Position1 - Position0
+                    local Center = (Position0 + Position1) / 2
+
+                    BlockMesh.Instance.Offset = Center
+                    BlockMesh.Instance.Scale  = Size / 0.0101
+
+                    Part.Instance.CFrame = Camera.CFrame
+                else
+                    DepthOfField:Tween(nil, {NearIntensity = 0})
+                    BlockMesh.Instance.Offset = Vector3New(0, 0, 0)
+                    BlockMesh.Instance.Scale  = Vector3New(0, 0, 0)
+                end
             else
                 DepthOfField:Tween(nil, {NearIntensity = 0})
                 BlockMesh.Instance.Offset = Vector3New(0, 0, 0)
                 BlockMesh.Instance.Scale  = Vector3New(0, 0, 0)
             end
-        end
-    end)
-end
+        end)
+    end
 
     Library.EscapePattern = function(self, String)
         local ShouldEscape = false 
@@ -1611,29 +1569,30 @@ end
                 Colorpicker:Update(true)
             end
 
-local Debounce = false
-local RenderStepped  
+            local Debounce = false
+            local RenderStepped  
 
-function Colorpicker:SetOpen(Bool)
-    if Debounce then 
-        return
-    end
+            function Colorpicker:SetOpen(Bool)
+                if Debounce then 
+                    return
+                end
 
-    Colorpicker.IsOpen = Bool
-    Debounce = true 
+                Colorpicker.IsOpen = Bool
 
-    if Colorpicker.IsOpen then 
-        Items["ColorpickerWindow"].Instance.Visible = true
-        Items["ColorpickerWindow"].Instance.Parent = Library.Holder.Instance
+                Debounce = true 
 
-        RenderStepped = RunService.Heartbeat:Connect(function(dt)
-            Items["ColorpickerWindow"].Instance.Position = UDim2New(
-                0, 
-                Items["ColorpickerButton"].Instance.AbsolutePosition.X, 
-                0, 
-                Items["ColorpickerButton"].Instance.AbsolutePosition.Y + Items["ColorpickerButton"].Instance.AbsoluteSize.Y + 5
-            )
-        end)
+                if Colorpicker.IsOpen then 
+                    Items["ColorpickerWindow"].Instance.Visible = true
+                    Items["ColorpickerWindow"].Instance.Parent = Library.Holder.Instance
+                    
+                    RenderStepped = RunService.RenderStepped:Connect(function()
+                        Items["ColorpickerWindow"].Instance.Position = UDim2New(
+                            0, 
+                            Items["ColorpickerButton"].Instance.AbsolutePosition.X, 
+                            0, 
+                            Items["ColorpickerButton"].Instance.AbsolutePosition.Y + Items["ColorpickerButton"].Instance.AbsoluteSize.Y + 5
+                        )
+                    end)
 
                     if Data.Section.IsSettings ~= true then
                         for Index, Value in Library.OpenFrames do 
@@ -2407,86 +2366,86 @@ function Colorpicker:SetOpen(Bool)
                     end
                 end)
 
-if IsMobile then 
-    Items["FloatingButton"] = Instances:Create("TextButton", {
-        Parent = Library.Holder.Instance,
-        Text = "",
-        AutoButtonColor = false,
-        Name = "\0",
-        Position = UDim2New(0.5, 0, 0, 20),
-        AnchorPoint = Vector2New(0.5, 0),
-        Visible = true,
-        BorderColor3 = FromRGB(0, 0, 0),
-        Size = UDim2New(0, 50, 0, 50),
-        BorderSizePixel = 0,
-        BackgroundTransparency = 0.5,
-        ZIndex = 127,
-        BackgroundColor3 = Library.Theme.Background
-    })  Items["FloatingButton"]:AddToTheme({BackgroundColor3 = "Background"})
+                if IsMobile then
+                    Items["FloatingButton"] = Instances:Create("TextButton", {
+                        Parent = Library.Holder.Instance,
+                        Text = "",
+                        AutoButtonColor = false,
+                        Name = "\0",
+                        Position = UDim2New(0.5, 0, 0, 20),
+                        AnchorPoint = Vector2New(0.5, 0),
+                        Visible = true,
+                        BorderColor3 = FromRGB(0, 0, 0),
+                        Size = UDim2New(0, 50, 0, 50),
+                        BorderSizePixel = 0,
+                        BackgroundTransparency = 0.5,
+                        ZIndex = 127,
+                        BackgroundColor3 = Library.Theme.Background
+                    })  Items["FloatingButton"]:AddToTheme({BackgroundColor3 = "Background"})
 
-    local Gui = Items["FloatingButton"].Instance
+                    local Gui = Items["FloatingButton"].Instance
 
-    local Dragging = false 
-    local DragStart
-    local StartPosition 
+                    local Dragging = false 
+                    local DragStart
+                    local StartPosition 
+        
+                    local Set = function(Input)
+                        local DragDelta = Input.Position - DragStart
+                        Items["FloatingButton"]:Tween(TweenInfo.new(0.16, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Position = UDim2New(StartPosition.X.Scale, StartPosition.X.Offset + DragDelta.X, StartPosition.Y.Scale, StartPosition.Y.Offset + DragDelta.Y)})
+                    end
+        
+                    Items["FloatingButton"]:Connect("InputBegan", function(Input)
+                        if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
+                            Dragging = true
+        
+                            DragStart = Input.Position
+                            StartPosition = Gui.Position
+        
+                            Input.Changed:Connect(function()
+                                if Input.UserInputState == Enum.UserInputState.End then
+                                    Dragging = false
+                                end
+                            end)
+                        end
+                    end)
+        
+                    Library:Connect(UserInputService.InputChanged, function(Input)
+                        if Input.UserInputType == Enum.UserInputType.MouseMovement or Input.UserInputType == Enum.UserInputType.Touch then
+                            if Dragging then
+                                Set(Input)
+                            end
+                        end
+                    end)
 
-    local Set = function(Input)
-        local DragDelta = Input.Position - DragStart
-        Items["FloatingButton"]:Tween(TweenInfo.new(0.16, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Position = UDim2New(StartPosition.X.Scale, StartPosition.X.Offset + DragDelta.X, StartPosition.Y.Scale, StartPosition.Y.Offset + DragDelta.Y)})
-    end
+                    Items["FloatingLogo"] = Instances:Create("ImageLabel", {
+                        Parent = Items["FloatingButton"].Instance,
+                        BorderColor3 = FromRGB(0, 0, 0),
+                        Name = "\0",
+                        Image = "rbxassetid://" .. Window.Logo,
+                        BackgroundTransparency = 1,
+                        AnchorPoint = Vector2New(0.5, 0.5),
+                        Position = UDim2New(0.5, 0, 0.5, 0),
+                        ZIndex = 127,
+                        Size = UDim2New(1, -25, 1, -25),
+                        BorderSizePixel = 0,
+                        BackgroundColor3 = FromRGB(255, 255, 255)
+                    })
+        
+                    Instances:Create("UICorner", {
+                        Parent = Items["FloatingButton"].Instance,
+                        CornerRadius = UDimNew(1, 0)
+                    }) 
 
-    Items["FloatingButton"]:Connect("InputBegan", function(Input)
-        if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
-            Dragging = true
-
-            DragStart = Input.Position
-            StartPosition = Gui.Position
-
-            Input.Changed:Connect(function()
-                if Input.UserInputState == Enum.UserInputState.End then
-                    Dragging = false
+                    Instances:Create("UIGradient", {
+                        Parent = Items["FloatingLogo"].Instance,
+                        Name = "\0",
+                        Enabled = true,
+                        Rotation = -115,
+                        Color = RGBSequence{RGBSequenceKeypoint(0, FromRGB(255, 255, 255)), RGBSequenceKeypoint(1, FromRGB(143, 143, 143))}
+                    }):AddToTheme({Color = function()
+                        return RGBSequence{RGBSequenceKeypoint(0, Library.Theme.Accent), RGBSequenceKeypoint(1, Library.Theme.AccentGradient)}
+                    end})
                 end
-            end)
-        end
-    end)
-
-    Library:Connect(UserInputService.InputChanged, function(Input)
-        if Input.UserInputType == Enum.UserInputType.MouseMovement or Input.UserInputType == Enum.UserInputType.Touch then
-            if Dragging then
-                Set(Input)
-            end
-        end
-    end)
-
-    Items["FloatingLogo"] = Instances:Create("ImageLabel", {
-        Parent = Items["FloatingButton"].Instance,
-        BorderColor3 = FromRGB(0, 0, 0),
-        Name = "\0",
-        Image = "rbxassetid://" .. Window.Logo,
-        BackgroundTransparency = 1,
-        AnchorPoint = Vector2New(0.5, 0.5),
-        Position = UDim2New(0.5, 0, 0.5, 0),
-        ZIndex = 127,
-        Size = UDim2New(1, -25, 1, -25),
-        BorderSizePixel = 0,
-        BackgroundColor3 = FromRGB(255, 255, 255)
-    })
-
-    Instances:Create("UICorner", {
-        Parent = Items["FloatingButton"].Instance,
-        CornerRadius = UDimNew(1, 0)
-    }) 
-
-    Instances:Create("UIGradient", {
-        Parent = Items["FloatingLogo"].Instance,
-        Name = "\0",
-        Enabled = true,
-        Rotation = -115,
-        Color = RGBSequence{RGBSequenceKeypoint(0, FromRGB(255, 255, 255)), RGBSequenceKeypoint(1, FromRGB(143, 143, 143))}
-    }):AddToTheme({Color = function()
-        return RGBSequence{RGBSequenceKeypoint(0, Library.Theme.Accent), RGBSequenceKeypoint(1, Library.Theme.AccentGradient)}
-    end})
-end
 
                 Items["PagePlaceholder"] = Instances:Create("Frame", {
                     Parent = Items["MainFrame"].Instance,
@@ -3123,7 +3082,7 @@ end
                             SettingsItems["Settings"].Instance.Visible = true
                             SettingsItems["Settings"].Instance.Parent = Library.Holder.Instance
                             
-                            RenderStepped = RunService.Heartbeat:Connect(function(dt)
+                            RenderStepped = RunService.RenderStepped:Connect(function()
                                 SettingsItems["Settings"].Instance.Position = UDim2New(0, Items["SettingsIcon"].Instance.AbsolutePosition.X, 0, Items["SettingsIcon"].Instance.AbsolutePosition.Y + Items["SettingsButton"].Instance.AbsoluteSize.Y + 108)
                                 SettingsItems["Settings"].Instance.Size = UDim2New(0, 325, 0, 230)
                             end)
@@ -3446,54 +3405,30 @@ end
             end
             --]]
 
-function Window:Init()
-    -- Limpiar conexiones viejas
-    for _, conn in pairs(Library.Connections) do
-        if conn.Connection then
-            conn.Connection:Disconnect()
-        end
-    end
-    Library.Connections = {}
-    
-    -- Limpiar threads viejos
-    for _, thread in pairs(Library.Threads) do
-        if coroutine.status(thread) ~= "dead" then
-            coroutine.close(thread)
-        end
-    end
-    Library.Threads = {}
-    
-    -- Activar página
-    for __, Value in Window.Pages do 
-        if Value.Active then 
-            for _, Value2 in Value.Sections do 
-                task.spawn(function()
-                    Value2:TweenElements(true)
-                    Library:RefreshConfigsList(ConfigsDropdown)
-                end)
+            function Window:Init()
+                for __, Value in Window.Pages do 
+                    if Value.Active then 
+                        for _, Value2 in Value.Sections do 
+                            task.spawn(function()
+                                Value2:TweenElements(true)
+                                Library:RefreshConfigsList(ConfigsDropdown)
+                            end)
+                        end
+                    end
+                end
             end
+
+            Library:Connect(UserInputService.InputBegan, function(Input)
+                if tostring(Input.KeyCode) == Library.MenuKeybind or tostring(Input.UserInputType) == Library.MenuKeybind then
+                    Window:SetOpen(not Window.IsOpen)
+                end
+            end)
+
+            Window:SetCenter()
+            task.wait()
+            Window:SetOpen(true)
+            return setmetatable(Window, Library)
         end
-    end
-end
-
-local CanToggle = true
-Library:Connect(UserInputService.InputBegan, function(Input)
-    if tostring(Input.KeyCode) == Library.MenuKeybind or tostring(Input.UserInputType) == Library.MenuKeybind then
-        if not CanToggle then return end
-        CanToggle = false
-        
-        Window:SetOpen(not Window.IsOpen)
-        
-        task.delay(0.3, function()
-            CanToggle = true
-        end)
-    end
-end)
-
-Window:SetCenter()
-task.wait()
-Window:SetOpen(true)
-return setmetatable(Window, Library)
 
         Library.Watermark = function(self, Data)
             if not Library.WatermarkFrame then
@@ -3551,7 +3486,7 @@ return setmetatable(Window, Library)
                             RGBSequenceKeypoint(0, Library.Theme.Accent), 
                             RGBSequenceKeypoint(1, Library.Theme.AccentGradient)
                         }
-                    end  -- ✅ Este end cierra la función Color
+                    end
                 })
 
                 local Content = Instances:Create("Frame", {
@@ -4859,16 +4794,14 @@ return setmetatable(Window, Library)
                 end
             end)
 
-function Section:TweenElements(Bool, Debounce)
-    for Index, Value in Section.Elements do
-        if Value and Value.RefreshPosition then
-            Value:RefreshPosition(Bool)
-        end
-        if not Debounce then 
-            task.wait(0.03)
-        end
-    end
-end
+            function Section:TweenElements(Bool, Debounce)
+                for Index, Value in Section.Elements do
+                    Value:RefreshPosition(Bool)
+                    if not Debounce then 
+                        task.wait(0.03)
+                    end
+                end
+            end
 
             Items["Toggle"]:Connect("MouseButton1Down", function()
                 Section:ToggleBackground()
@@ -5211,7 +5144,7 @@ end
                         SettingsItem["Settings"].Instance.Visible = true
                         SettingsItem["Settings"].Instance.Parent = Library.Holder.Instance
                         
-                        RenderStepped = RunService.Heartbeat:Connect(function(dt)
+                        RenderStepped = RunService.RenderStepped:Connect(function()
                             SettingsItem["Settings"].Instance.Position = UDim2New(
                                 0, Items["Toggle"].Instance.AbsolutePosition.X + Items["Toggle"].Instance.AbsoluteSize.X / 1.9 + 15, 
                                 0, Items["Toggle"].Instance.AbsolutePosition.Y + Items["Toggle"].Instance.AbsoluteSize.Y + Size / 1.9)
@@ -6061,7 +5994,7 @@ end
                         end
                     end)
                     
-                    RenderStepped = RunService.Heartbeat:Connect(function(dt)
+                    RenderStepped = RunService.RenderStepped:Connect(function()
                         Items["OptionHolder"].Instance.Position = UDim2New(0, Items["RealDropdown"].Instance.AbsolutePosition.X, 0, Items["RealDropdown"].Instance.AbsolutePosition.Y + Items["RealDropdown"].Instance.AbsoluteSize.Y + 5)
                         Items["OptionHolder"].Instance.Size = UDim2New(0, Items["RealDropdown"].Instance.AbsoluteSize.X, 0, Dropdown.OptionHolderSize)
                     end)
@@ -7620,1158 +7553,7 @@ end
             Dropdown.Section.Elements[#Dropdown.Section.Elements+1] = Dropdown
             return Dropdown
         end
-
-		Library.Sections.Paragraph = function(self, Data)
-    Data = Data or {}
-
-    local Paragraph = {
-        Window = self.Window,
-        Page = self.Page,
-        Section = self,
-        Title = Data.Title or Data.title or "Paragraph",
-        Desc = Data.Desc or Data.desc or ""
-    }
-
-    local Items = {} do
-        Items["Paragraph"] = Instances:Create("Frame", {
-            Parent = Paragraph.Section.Items["Content"].Instance,
-            Name = "\0",
-            BackgroundTransparency = 1,
-            Size = UDim2New(1, 0, 0, 0),
-            BorderSizePixel = 0,
-            AutomaticSize = Enum.AutomaticSize.Y,
-            BackgroundColor3 = FromRGB(255, 255, 255)
-        })
-
-        Items["Title"] = Instances:Create("TextLabel", {
-            Parent = Items["Paragraph"].Instance,
-            Name = "\0",
-            FontFace = Library.Font,
-            TextColor3 = FromRGB(240, 240, 240),
-            Text = Paragraph.Title,
-            AutomaticSize = Enum.AutomaticSize.Y,
-            Size = UDim2New(1, 0, 0, 15),
-            BackgroundTransparency = 1,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            TextWrapped = true,
-            BorderSizePixel = 0,
-            ZIndex = 2,
-            TextSize = 14,
-            BackgroundColor3 = FromRGB(255, 255, 255)
-        }) Items["Title"]:AddToTheme({TextColor3 = "Text"})
-
-        Items["Desc"] = Instances:Create("TextLabel", {
-            Parent = Items["Paragraph"].Instance,
-            Name = "\0",
-            FontFace = Library.Font,
-            TextColor3 = FromRGB(240, 240, 240),
-            TextTransparency = 0.4,
-            Text = Paragraph.Desc,
-            AutomaticSize = Enum.AutomaticSize.Y,
-            Size = UDim2New(1, 0, 0, 0),
-            Position = UDim2New(0, 0, 0, 18),
-            BackgroundTransparency = 1,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            TextWrapped = true,
-            BorderSizePixel = 0,
-            ZIndex = 2,
-            TextSize = 13,
-            BackgroundColor3 = FromRGB(255, 255, 255)
-        }) Items["Desc"]:AddToTheme({TextColor3 = "Text"})
-
-        Instances:Create("UIPadding", {
-            Parent = Items["Paragraph"].Instance,
-            Name = "\0",
-            PaddingBottom = UDimNew(0, 5)
-        })
     end
-
-    function Paragraph:SetTitle(Text)
-        Items["Title"].Instance.Text = tostring(Text)
-    end
-
-    function Paragraph:SetDesc(Text)
-        Items["Desc"].Instance.Text = tostring(Text)
-    end
-
-    function Paragraph:RefreshPosition(Bool)
-        if Bool then
-            Items["Title"]:Tween(TweenInfo.new(1, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position = UDim2New(0, 0, 0, 0)})
-        else
-            Items["Title"].Instance.Position = UDim2New(0, 30, 0, 0)
-        end
-    end
-
-    Paragraph.Section.Elements[#Paragraph.Section.Elements+1] = Paragraph
-    return Paragraph
-end
-
-Library.Sections.Stepper = function(self, Data)
-    Data = Data or {}
-
-    local Stepper = {
-        Window = self.Window,
-        Page = self.Page,
-        Section = self,
-        Name = Data.Name or Data.name or "Stepper",
-        Flag = Data.Flag or Data.flag or Library:NextFlag(),
-        Min = (Data.Value and Data.Value.Min) or Data.Min or 0,
-        Max = (Data.Value and Data.Value.Max) or Data.Max or 10,
-        Default = (Data.Value and Data.Value.Default) or Data.Default or 0,
-        Step = Data.Step or Data.step or 1,
-        Suffix = Data.Suffix or Data.suffix or "",
-        Callback = Data.Callback or Data.callback or function() end,
-        Value = 0
-    }
-
-    local Items = {} do
-        Items["Stepper"] = Instances:Create("Frame", {
-            Parent = Stepper.Section.Items["Content"].Instance,
-            Name = "\0",
-            BackgroundTransparency = 1,
-            Size = UDim2New(1, 0, 0, 25),
-            BorderSizePixel = 0,
-            BackgroundColor3 = FromRGB(255, 255, 255)
-        })
-
-        Items["Text"] = Instances:Create("TextLabel", {
-            Parent = Items["Stepper"].Instance,
-            Name = "\0",
-            FontFace = Library.Font,
-            TextColor3 = FromRGB(240, 240, 240),
-            TextTransparency = 0.3,
-            Text = Stepper.Name,
-            AutomaticSize = Enum.AutomaticSize.X,
-            Size = UDim2New(0, 0, 0, 15),
-            AnchorPoint = Vector2New(0, 0.5),
-            Position = UDim2New(0, 0, 0.5, 0),
-            BackgroundTransparency = 1,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            BorderSizePixel = 0,
-            ZIndex = 2,
-            TextSize = 14,
-            BackgroundColor3 = FromRGB(255, 255, 255)
-        }) Items["Text"]:AddToTheme({TextColor3 = "Text"})
-
-        Items["Container"] = Instances:Create("Frame", {
-            Parent = Items["Stepper"].Instance,
-            Name = "\0",
-            Size = UDim2New(0, 100, 0, 25),
-            AnchorPoint = Vector2New(1, 0.5),
-            Position = UDim2New(1, 0, 0.5, 0),
-            BackgroundColor3 = FromRGB(16, 16, 18),
-            BorderSizePixel = 0,
-            ZIndex = 2
-        }) Items["Container"]:AddToTheme({BackgroundColor3 = "Element"})
-
-        Instances:Create("UICorner", {
-            Parent = Items["Container"].Instance,
-            CornerRadius = UDimNew(0, 5)
-        })
-
-        Items["Minus"] = Instances:Create("TextButton", {
-            Parent = Items["Container"].Instance,
-            Name = "\0",
-            FontFace = Library.Font,
-            Text = "-",
-            TextColor3 = FromRGB(240, 240, 240),
-            Size = UDim2New(0, 25, 1, 0),
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            ZIndex = 3,
-            TextSize = 16,
-            AutoButtonColor = false,
-            BackgroundColor3 = FromRGB(255, 255, 255)
-        }) Items["Minus"]:AddToTheme({TextColor3 = "Text"})
-
-        Items["Plus"] = Instances:Create("TextButton", {
-            Parent = Items["Container"].Instance,
-            Name = "\0",
-            FontFace = Library.Font,
-            Text = "+",
-            TextColor3 = FromRGB(240, 240, 240),
-            AnchorPoint = Vector2New(1, 0),
-            Position = UDim2New(1, 0, 0, 0),
-            Size = UDim2New(0, 25, 1, 0),
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            ZIndex = 3,
-            TextSize = 16,
-            AutoButtonColor = false,
-            BackgroundColor3 = FromRGB(255, 255, 255)
-        }) Items["Plus"]:AddToTheme({TextColor3 = "Text"})
-
-        Items["Value"] = Instances:Create("TextLabel", {
-            Parent = Items["Container"].Instance,
-            Name = "\0",
-            FontFace = Library.Font,
-            TextColor3 = FromRGB(240, 240, 240),
-            Text = "0",
-            AnchorPoint = Vector2New(0.5, 0.5),
-            Position = UDim2New(0.5, 0, 0.5, 0),
-            Size = UDim2New(0, 50, 1, 0),
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            ZIndex = 3,
-            TextSize = 14,
-            BackgroundColor3 = FromRGB(255, 255, 255)
-        }) Items["Value"]:AddToTheme({TextColor3 = "Text"})
-    end
-
-    function Stepper:Set(Value)
-        Stepper.Value = MathClamp(Value, Stepper.Min, Stepper.Max)
-        Library.Flags[Stepper.Flag] = Stepper.Value
-        Items["Value"].Instance.Text = tostring(Stepper.Value) .. Stepper.Suffix
-        if Stepper.Callback then
-            Library:SafeCall(Stepper.Callback, Stepper.Value)
-        end
-    end
-
-    function Stepper:Get()
-        return Stepper.Value
-    end
-
-    function Stepper:RefreshPosition(Bool)
-        if Bool then
-            Items["Text"]:Tween(TweenInfo.new(1, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position = UDim2New(0, 0, 0.5, 0)})
-            Items["Container"]:Tween(TweenInfo.new(1, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position = UDim2New(1, 0, 0.5, 0)})
-        else
-            Items["Text"].Instance.Position = UDim2New(0, 30, 0.5, 0)
-            Items["Container"].Instance.Position = UDim2New(1, 30, 0.5, 0)
-        end
-    end
-
-    Items["Minus"]:Connect("MouseButton1Down", function()
-        Stepper:Set(Stepper.Value - Stepper.Step)
-    end)
-
-    Items["Plus"]:Connect("MouseButton1Down", function()
-        Stepper:Set(Stepper.Value + Stepper.Step)
-    end)
-
-    Stepper:Set(Stepper.Default)
-
-    Library.SetFlags[Stepper.Flag] = function(Value)
-        Stepper:Set(Value)
-    end
-
-    Stepper.Section.Elements[#Stepper.Section.Elements+1] = Stepper
-    return Stepper
-end
-
-Library.Sections.Progress = function(self, Data)
-    Data = Data or {}
-
-    local Progress = {
-        Window = self.Window,
-        Page = self.Page,
-        Section = self,
-        Name = Data.Name or Data.name or "Progress",
-        Min = (Data.Value and Data.Value.Min) or Data.Min or 0,
-        Max = (Data.Value and Data.Value.Max) or Data.Max or 100,
-        Default = (Data.Value and Data.Value.Default) or Data.Default or 0,
-        Suffix = Data.Suffix or Data.suffix or "",
-        Value = 0
-    }
-
-    local Items = {} do
-        Items["Progress"] = Instances:Create("Frame", {
-            Parent = Progress.Section.Items["Content"].Instance,
-            Name = "\0",
-            BackgroundTransparency = 1,
-            Size = UDim2New(1, 0, 0, 35),
-            BorderSizePixel = 0,
-            BackgroundColor3 = FromRGB(255, 255, 255)
-        })
-
-        Items["Text"] = Instances:Create("TextLabel", {
-            Parent = Items["Progress"].Instance,
-            Name = "\0",
-            FontFace = Library.Font,
-            TextColor3 = FromRGB(240, 240, 240),
-            TextTransparency = 0.3,
-            Text = Progress.Name,
-            AutomaticSize = Enum.AutomaticSize.X,
-            Size = UDim2New(0, 0, 0, 15),
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            ZIndex = 2,
-            TextSize = 14,
-            BackgroundColor3 = FromRGB(255, 255, 255)
-        }) Items["Text"]:AddToTheme({TextColor3 = "Text"})
-
-        Items["Bar"] = Instances:Create("Frame", {
-            Parent = Items["Progress"].Instance,
-            Name = "\0",
-            Size = UDim2New(1, 0, 0, 7),
-            AnchorPoint = Vector2New(0, 1),
-            Position = UDim2New(0, 0, 1, -3),
-            BackgroundColor3 = FromRGB(16, 16, 18),
-            BorderSizePixel = 0,
-            ZIndex = 2
-        }) Items["Bar"]:AddToTheme({BackgroundColor3 = "Element"})
-
-        Instances:Create("UICorner", {
-            Parent = Items["Bar"].Instance,
-            CornerRadius = UDimNew(1, 0)
-        })
-
-        Items["Fill"] = Instances:Create("Frame", {
-            Parent = Items["Bar"].Instance,
-            Name = "\0",
-            Size = UDim2New(0, 0, 1, 0),
-            BackgroundColor3 = FromRGB(255, 255, 255),
-            BorderSizePixel = 0,
-            ZIndex = 3
-        })
-
-        Instances:Create("UICorner", {
-            Parent = Items["Fill"].Instance,
-            CornerRadius = UDimNew(1, 0)
-        })
-
-        Instances:Create("UIGradient", {
-            Parent = Items["Fill"].Instance,
-            Name = "\0",
-            Rotation = -102,
-            Color = RGBSequence{RGBSequenceKeypoint(0, FromRGB(255, 255, 255)), RGBSequenceKeypoint(1, FromRGB(166, 166, 166))}
-        }):AddToTheme({Color = function()
-            return RGBSequence{RGBSequenceKeypoint(0, Library.Theme.Accent), RGBSequenceKeypoint(1, Library.Theme.AccentGradient)}
-        end})
-
-        Items["ValueLabel"] = Instances:Create("TextLabel", {
-            Parent = Items["Progress"].Instance,
-            Name = "\0",
-            FontFace = Library.Font,
-            TextColor3 = FromRGB(240, 240, 240),
-            TextTransparency = 0.3,
-            Text = "0",
-            AutomaticSize = Enum.AutomaticSize.X,
-            Size = UDim2New(0, 0, 0, 15),
-            AnchorPoint = Vector2New(1, 0),
-            Position = UDim2New(1, 0, 0, 0),
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            ZIndex = 2,
-            TextSize = 14,
-            BackgroundColor3 = FromRGB(255, 255, 255)
-        }) Items["ValueLabel"]:AddToTheme({TextColor3 = "Text"})
-    end
-
-    function Progress:Set(Value)
-        Progress.Value = MathClamp(Value, Progress.Min, Progress.Max)
-        local Percent = (Progress.Value - Progress.Min) / (Progress.Max - Progress.Min)
-        Items["Fill"]:Tween(TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2New(Percent, 0, 1, 0)})
-        Items["ValueLabel"].Instance.Text = tostring(Progress.Value) .. Progress.Suffix
-    end
-
-    function Progress:Get()
-        return Progress.Value
-    end
-
-    function Progress:RefreshPosition(Bool)
-        if Bool then
-            Items["Text"]:Tween(TweenInfo.new(1, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position = UDim2New(0, 0, 0, 0)})
-        else
-            Items["Text"].Instance.Position = UDim2New(0, 30, 0, 0)
-        end
-    end
-
-    Progress:Set(Progress.Default)
-    Progress.Section.Elements[#Progress.Section.Elements+1] = Progress
-    return Progress
-end
-
-Library.Sections.Stats = function(self, Data)
-    Data = Data or {}
-
-    local Stats = {
-        Window = self.Window,
-        Page = self.Page,
-        Section = self,
-        Name = Data.Name or Data.name or "Stats",
-        Items = Data.Items or {},
-        StatItems = {}
-    }
-
-    local Container = Instances:Create("Frame", {
-        Parent = Stats.Section.Items["Content"].Instance,
-        Name = "\0",
-        BackgroundTransparency = 1,
-        Size = UDim2New(1, 0, 0, 0),
-        BorderSizePixel = 0,
-        AutomaticSize = Enum.AutomaticSize.Y,
-        BackgroundColor3 = FromRGB(255, 255, 255)
-    })
-
-    Instances:Create("UIListLayout", {
-        Parent = Container.Instance,
-        Name = "\0",
-        Padding = UDimNew(0, 3),
-        SortOrder = Enum.SortOrder.LayoutOrder
-    })
-
-    for _, Item in ipairs(Stats.Items) do
-        local Row = Instances:Create("Frame", {
-            Parent = Container.Instance,
-            Name = "\0",
-            BackgroundTransparency = 1,
-            Size = UDim2New(1, 0, 0, 18),
-            BorderSizePixel = 0,
-            BackgroundColor3 = FromRGB(255, 255, 255)
-        })
-
-        local KeyLabel = Instances:Create("TextLabel", {
-            Parent = Row.Instance,
-            Name = "\0",
-            FontFace = Library.Font,
-            TextColor3 = FromRGB(240, 240, 240),
-            TextTransparency = 0.5,
-            Text = tostring(Item.Key),
-            AutomaticSize = Enum.AutomaticSize.X,
-            Size = UDim2New(0, 0, 1, 0),
-            BackgroundTransparency = 1,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            BorderSizePixel = 0,
-            ZIndex = 2,
-            TextSize = 13,
-            BackgroundColor3 = FromRGB(255, 255, 255)
-        }) KeyLabel:AddToTheme({TextColor3 = "Text"})
-
-        local ValueLabel = Instances:Create("TextLabel", {
-            Parent = Row.Instance,
-            Name = "\0",
-            FontFace = Library.Font,
-            TextColor3 = FromRGB(240, 240, 240),
-            TextTransparency = 0.3,
-            Text = tostring(Item.Value),
-            AutomaticSize = Enum.AutomaticSize.X,
-            Size = UDim2New(0, 0, 1, 0),
-            AnchorPoint = Vector2New(1, 0),
-            Position = UDim2New(1, 0, 0, 0),
-            BackgroundTransparency = 1,
-            TextXAlignment = Enum.TextXAlignment.Right,
-            BorderSizePixel = 0,
-            ZIndex = 2,
-            TextSize = 13,
-            BackgroundColor3 = FromRGB(255, 255, 255)
-        }) ValueLabel:AddToTheme({TextColor3 = "Text"})
-
-        Stats.StatItems[Item.Key] = ValueLabel
-    end
-
-    function Stats:Update(Key, Value)
-        local Label = Stats.StatItems[Key]
-        if Label then
-            Label.Instance.Text = tostring(Value)
-        end
-    end
-
-    function Stats:RefreshPosition(Bool) end
-
-    Stats.Section.Elements[#Stats.Section.Elements+1] = Stats
-    return Stats
-end
-
-Library.Sections.Group = function(self, Data)
-    Data = Data or {}
-
-    local Group = {
-        Window = self.Window,
-        Page = self.Page,
-        Section = self,
-        Elements = {}
-    }
-
-    local Container = Instances:Create("Frame", {
-        Parent = Group.Section.Items["Content"].Instance,
-        Name = "\0",
-        BackgroundTransparency = 1,
-        Size = UDim2New(1, 0, 0, 32),
-        BorderSizePixel = 0,
-        BackgroundColor3 = FromRGB(255, 255, 255)
-    })
-
-    Instances:Create("UIListLayout", {
-        Parent = Container.Instance,
-        Name = "\0",
-        FillDirection = Enum.FillDirection.Horizontal,
-        Padding = UDimNew(0, 5),
-        SortOrder = Enum.SortOrder.LayoutOrder
-    })
-
-    function Group:Button(BData)
-        BData = BData or {}
-
-        local Btn = Instances:Create("TextButton", {
-            Parent = Container.Instance,
-            Name = "\0",
-            FontFace = Library.Font,
-            Text = "",
-            AutoButtonColor = false,
-            Size = UDim2New(0, 0, 1, 0),
-            AutomaticSize = Enum.AutomaticSize.X,
-            BorderSizePixel = 0,
-            ZIndex = 2,
-            BackgroundColor3 = FromRGB(16, 16, 18)
-        }) Btn:AddToTheme({BackgroundColor3 = "Element"})
-
-        Instances:Create("UICorner", {
-            Parent = Btn.Instance,
-            CornerRadius = UDimNew(0, 5)
-        })
-
-        Instances:Create("UIPadding", {
-            Parent = Btn.Instance,
-            PaddingLeft = UDimNew(0, 10),
-            PaddingRight = UDimNew(0, 10)
-        })
-
-        local BtnText = Instances:Create("TextLabel", {
-            Parent = Btn.Instance,
-            Name = "\0",
-            FontFace = Library.Font,
-            TextColor3 = FromRGB(240, 240, 240),
-            TextTransparency = 0.3,
-            Text = BData.Name or BData.Title or "Button",
-            AutomaticSize = Enum.AutomaticSize.X,
-            Size = UDim2New(0, 0, 1, 0),
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            ZIndex = 3,
-            TextSize = 14,
-            BackgroundColor3 = FromRGB(255, 255, 255)
-        }) BtnText:AddToTheme({TextColor3 = "Text"})
-
-        local Accent = Instances:Create("Frame", {
-            Parent = Btn.Instance,
-            Name = "\0",
-            Size = UDim2New(0, 0, 0, 0),
-            AnchorPoint = Vector2New(0.5, 0.5),
-            Position = UDim2New(0.5, 0, 0.5, 0),
-            BackgroundTransparency = 1,
-            BackgroundColor3 = FromRGB(255, 255, 255),
-            BorderSizePixel = 0,
-            ZIndex = 2
-        })
-
-        Instances:Create("UICorner", {
-            Parent = Accent.Instance,
-            CornerRadius = UDimNew(0, 5)
-        })
-
-        Instances:Create("UIGradient", {
-            Parent = Accent.Instance,
-            Rotation = -115,
-            Color = RGBSequence{RGBSequenceKeypoint(0, FromRGB(255, 255, 255)), RGBSequenceKeypoint(1, FromRGB(143, 143, 143))}
-        }):AddToTheme({Color = function()
-            return RGBSequence{RGBSequenceKeypoint(0, Library.Theme.Accent), RGBSequenceKeypoint(1, Library.Theme.AccentGradient)}
-        end})
-
-        Btn:OnHover(function()
-            Accent:Tween(TweenInfo.new(Library.Tween.Time + 0.15, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2New(1, 0, 1, 0), BackgroundTransparency = 0})
-        end)
-        Btn:OnHoverLeave(function()
-            Accent:Tween(TweenInfo.new(Library.Tween.Time + 0.15, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2New(0, 0, 0, 0), BackgroundTransparency = 1})
-        end)
-
-        Btn:Connect("MouseButton1Down", function()
-            if BData.Callback then
-                Library:SafeCall(BData.Callback)
-            end
-        end)
-
-        return Btn
-    end
-
-    function Group:Toggle(TData)
-        TData = TData or {}
-        return Group.Section:Toggle(TData)
-    end
-
-    function Group:RefreshPosition(Bool) end
-
-    Group.Section.Elements[#Group.Section.Elements+1] = Group
-    return Group
-end
-
-Library.Sections.Segmented = function(self, Data)
-    Data = Data or {}
-
-    local Segmented = {
-        Window = self.Window,
-        Page = self.Page,
-        Section = self,
-        Name = Data.Name or Data.name or "Segmented",
-        Flag = Data.Flag or Data.flag or Library:NextFlag(),
-        Options = Data.Options or {},
-        Default = Data.Default or Data.Value or nil,
-        Callback = Data.Callback or Data.callback or function() end,
-        Value = nil
-    }
-
-    local Items = {} do
-        Items["Segmented"] = Instances:Create("Frame", {
-            Parent = Segmented.Section.Items["Content"].Instance,
-            Name = "\0",
-            BackgroundTransparency = 1,
-            Size = UDim2New(1, 0, 0, 25),
-            BorderSizePixel = 0,
-            BackgroundColor3 = FromRGB(255, 255, 255)
-        })
-
-        if Segmented.Name ~= "" then
-            Items["Text"] = Instances:Create("TextLabel", {
-                Parent = Items["Segmented"].Instance,
-                Name = "\0",
-                FontFace = Library.Font,
-                TextColor3 = FromRGB(240, 240, 240),
-                TextTransparency = 0.3,
-                Text = Segmented.Name,
-                AutomaticSize = Enum.AutomaticSize.X,
-                Size = UDim2New(0, 0, 0, 15),
-                AnchorPoint = Vector2New(0, 0.5),
-                Position = UDim2New(0, 0, 0.5, 0),
-                BackgroundTransparency = 1,
-                BorderSizePixel = 0,
-                ZIndex = 2,
-                TextSize = 14,
-                BackgroundColor3 = FromRGB(255, 255, 255)
-            }) Items["Text"]:AddToTheme({TextColor3 = "Text"})
-        end
-
-        Items["Container"] = Instances:Create("Frame", {
-            Parent = Items["Segmented"].Instance,
-            Name = "\0",
-            Size = UDim2New(0, 0, 1, 0),
-            AnchorPoint = Vector2New(1, 0.5),
-            Position = UDim2New(1, 0, 0.5, 0),
-            AutomaticSize = Enum.AutomaticSize.X,
-            BackgroundColor3 = FromRGB(16, 16, 18),
-            BorderSizePixel = 0,
-            ZIndex = 2
-        }) Items["Container"]:AddToTheme({BackgroundColor3 = "Element"})
-
-        Instances:Create("UICorner", {
-            Parent = Items["Container"].Instance,
-            CornerRadius = UDimNew(0, 5)
-        })
-
-        Instances:Create("UIListLayout", {
-            Parent = Items["Container"].Instance,
-            FillDirection = Enum.FillDirection.Horizontal,
-            SortOrder = Enum.SortOrder.LayoutOrder,
-            Padding = UDimNew(0, 2)
-        })
-
-        Instances:Create("UIPadding", {
-            Parent = Items["Container"].Instance,
-            PaddingLeft = UDimNew(0, 2),
-            PaddingRight = UDimNew(0, 2),
-            PaddingTop = UDimNew(0, 2),
-            PaddingBottom = UDimNew(0, 2)
-        })
-    end
-
-    local Buttons = {}
-
-    local function UpdateButtons(SelectedValue)
-        for Value, BtnData in pairs(Buttons) do
-            if Value == SelectedValue then
-                BtnData.Btn:Tween(nil, {BackgroundTransparency = 0})
-                BtnData.Label:Tween(nil, {TextTransparency = 0})
-            else
-                BtnData.Btn:Tween(nil, {BackgroundTransparency = 1})
-                BtnData.Label:Tween(nil, {TextTransparency = 0.4})
-            end
-        end
-    end
-
-    for _, Option in ipairs(Segmented.Options) do
-        local OptionValue = type(Option) == "table" and (Option.Value or Option.Title) or Option
-        local OptionTitle = type(Option) == "table" and Option.Title or tostring(Option)
-
-        local Btn = Instances:Create("TextButton", {
-            Parent = Items["Container"].Instance,
-            Name = "\0",
-            Text = "",
-            AutoButtonColor = false,
-            Size = UDim2New(0, 0, 1, 0),
-            AutomaticSize = Enum.AutomaticSize.X,
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            ZIndex = 3,
-            BackgroundColor3 = FromRGB(255, 255, 255)
-        })
-
-        Instances:Create("UICorner", {
-            Parent = Btn.Instance,
-            CornerRadius = UDimNew(0, 4)
-        })
-
-        Instances:Create("UIGradient", {
-            Parent = Btn.Instance,
-            Rotation = -115,
-            Color = RGBSequence{RGBSequenceKeypoint(0, FromRGB(255, 255, 255)), RGBSequenceKeypoint(1, FromRGB(143, 143, 143))}
-        }):AddToTheme({Color = function()
-            return RGBSequence{RGBSequenceKeypoint(0, Library.Theme.Accent), RGBSequenceKeypoint(1, Library.Theme.AccentGradient)}
-        end})
-
-        Instances:Create("UIPadding", {
-            Parent = Btn.Instance,
-            PaddingLeft = UDimNew(0, 8),
-            PaddingRight = UDimNew(0, 8)
-        })
-
-        local Label = Instances:Create("TextLabel", {
-            Parent = Btn.Instance,
-            Name = "\0",
-            FontFace = Library.Font,
-            TextColor3 = FromRGB(240, 240, 240),
-            TextTransparency = 0.4,
-            Text = OptionTitle,
-            AutomaticSize = Enum.AutomaticSize.X,
-            Size = UDim2New(0, 0, 1, 0),
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            ZIndex = 4,
-            TextSize = 13,
-            BackgroundColor3 = FromRGB(255, 255, 255)
-        }) Label:AddToTheme({TextColor3 = "Text"})
-
-        Buttons[OptionValue] = {Btn = Btn, Label = Label}
-
-        Btn:Connect("MouseButton1Down", function()
-            Segmented:Set(OptionValue)
-        end)
-    end
-
-    function Segmented:Set(Value)
-        Segmented.Value = Value
-        Library.Flags[Segmented.Flag] = Value
-        UpdateButtons(Value)
-        if Segmented.Callback then
-            Library:SafeCall(Segmented.Callback, Value)
-        end
-    end
-
-    function Segmented:Get()
-        return Segmented.Value
-    end
-
-    function Segmented:RefreshPosition(Bool)
-        if Bool then
-            if Items["Text"] then
-                Items["Text"]:Tween(TweenInfo.new(1, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position = UDim2New(0, 0, 0.5, 0)})
-            end
-            Items["Container"]:Tween(TweenInfo.new(1, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position = UDim2New(1, 0, 0.5, 0)})
-        else
-            if Items["Text"] then
-                Items["Text"].Instance.Position = UDim2New(0, 30, 0.5, 0)
-            end
-            Items["Container"].Instance.Position = UDim2New(1, 30, 0.5, 0)
-        end
-    end
-
-    if Segmented.Default then
-        Segmented:Set(Segmented.Default)
-    elseif #Segmented.Options > 0 then
-        local First = Segmented.Options[1]
-        Segmented:Set(type(First) == "table" and (First.Value or First.Title) or First)
-    end
-
-    Library.SetFlags[Segmented.Flag] = function(Value)
-        Segmented:Set(Value)
-    end
-
-    Segmented.Section.Elements[#Segmented.Section.Elements+1] = Segmented
-    return Segmented
-        end
-
--- ==================== CODE (CORREGIDO) ====================
-Library.Sections.Code = function(self, Data)
-    Data = Data or {}
-
-    local CodeItem = {
-        Window = self.Window,
-        Page = self.Page,
-        Section = self,
-        Title = Data.Title or "Code",
-        Code = Data.Code or "",
-        OnCopy = Data.OnCopy or function() end
-    }
-
-    local Items = {} do
-        Items["Container"] = Instances:Create("Frame", {
-            Parent = CodeItem.Section.Items["Content"].Instance,
-            Name = "\0",
-            BackgroundTransparency = 1,
-            Size = UDim2New(1, 0, 0, 0),
-            AutomaticSize = Enum.AutomaticSize.Y,
-            BorderSizePixel = 0,
-            BackgroundColor3 = FromRGB(255, 255, 255)
-        })
-
-        Items["Title"] = Instances:Create("TextLabel", {
-            Parent = Items["Container"].Instance,
-            Name = "\0",
-            FontFace = Library.Font,
-            TextColor3 = FromRGB(240, 240, 240),
-            TextTransparency = 0.3,
-            Text = CodeItem.Title,
-            AutomaticSize = Enum.AutomaticSize.X,
-            Size = UDim2New(0, 0, 0, 15),
-            Position = UDim2New(0, 0, 0, 0),
-            BackgroundTransparency = 1,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            BorderSizePixel = 0,
-            ZIndex = 2,
-            TextSize = 14,
-            BackgroundColor3 = FromRGB(255, 255, 255)
-        })
-        Items["Title"]:AddToTheme({TextColor3 = "Text"})
-
-        Items["CodeBG"] = Instances:Create("Frame", {
-            Parent = Items["Container"].Instance,
-            Name = "\0",
-            Size = UDim2New(1, -20, 0, 0),
-            Position = UDim2New(0, 10, 0, 22),
-            BackgroundColor3 = FromRGB(18, 18, 22),
-            BorderSizePixel = 0,
-            AutomaticSize = Enum.AutomaticSize.Y,
-            ZIndex = 2
-        })
-        Items["CodeBG"]:AddToTheme({BackgroundColor3 = "Element"})
-        Instances:Create("UICorner", { 
-            Parent = Items["CodeBG"].Instance, 
-            CornerRadius = UDimNew(0, 6) 
-        })
-        
-        -- ✅ CORREGIDO: UIPadding con UDim
-        Instances:Create("UIPadding", { 
-            Parent = Items["CodeBG"].Instance, 
-            PaddingTop = UDimNew(0, 10),
-            PaddingBottom = UDimNew(0, 10),
-            PaddingLeft = UDimNew(0, 12),
-            PaddingRight = UDimNew(0, 12)
-        })
-
-        Items["CodeText"] = Instances:Create("TextLabel", {
-            Parent = Items["CodeBG"].Instance,
-            Name = "\0",
-            FontFace = Font.new("rbxassetid://12187365364", Enum.FontWeight.Regular, Enum.FontStyle.Normal),
-            Text = CodeItem.Code,
-            TextColor3 = FromRGB(180, 220, 180),
-            TextSize = 12,
-            Size = UDim2New(1, -70, 0, 0),
-            BackgroundTransparency = 1,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            TextYAlignment = Enum.TextYAlignment.Top,
-            TextWrapped = true,
-            AutomaticSize = Enum.AutomaticSize.Y,
-            ZIndex = 3
-        })
-
-        Items["CopyBtn"] = Instances:Create("TextButton", {
-            Parent = Items["CodeBG"].Instance,
-            Name = "\0",
-            FontFace = Library.Font,
-            Text = "Copy",
-            TextColor3 = FromRGB(240, 240, 240),
-            TextSize = 12,
-            Size = UDim2New(0, 55, 0, 28),
-            Position = UDim2New(1, -10, 0, 10),
-            AnchorPoint = Vector2New(1, 0),
-            BackgroundColor3 = Library.Theme.Accent,
-            BackgroundTransparency = 0.15,
-            BorderSizePixel = 0,
-            AutoButtonColor = false,
-            ZIndex = 4
-        })
-        Items["CopyBtn"]:AddToTheme({BackgroundColor3 = "Accent"})
-        Instances:Create("UICorner", { 
-            Parent = Items["CopyBtn"].Instance, 
-            CornerRadius = UDimNew(0, 4) 
-        })
-
-        Items["CopyBtn"]:OnHover(function()
-            Items["CopyBtn"]:Tween(nil, { BackgroundTransparency = 0 })
-        end)
-
-        Items["CopyBtn"]:OnHoverLeave(function()
-            Items["CopyBtn"]:Tween(nil, { BackgroundTransparency = 0.15 })
-        end)
-
-        Items["CopyBtn"]:Connect("MouseButton1Down", function()
-            setclipboard(CodeItem.Code)
-            Library:Notification({
-                Title = "Copied",
-                Description = "Code copied!",
-                Duration = 2,
-                Icon = "107759198829431"
-            })
-            Library:SafeCall(CodeItem.OnCopy)
-        end)
-    end
-
-    function CodeItem:SetCode(NewCode)
-        CodeItem.Code = NewCode
-        Items["CodeText"].Instance.Text = NewCode
-    end
-
-    function CodeItem:Get()
-        return CodeItem.Code
-    end
-
-    CodeItem.Section.Elements[#CodeItem.Section.Elements + 1] = CodeItem
-    return CodeItem
-end
-
--- ==================== NUMBER SLIDER (NUEVO) ====================
-Library.Sections.NumberSlider = function(self, Data)
-    Data = Data or {}
-
-    local SliderItem = {
-        Window = self.Window,
-        Page = self.Page,
-        Section = self,
-        Name = Data.Name or "Slider",
-        Flag = Data.Flag or Library:NextFlag(),
-        Min = Data.Min or 0,
-        Max = Data.Max or 100,
-        Default = Data.Default or 50,
-        Suffix = Data.Suffix or "",
-        Callback = Data.Callback or function() end,
-        Value = nil
-    }
-
-    local Items = {} do
-        Items["Slider"] = Instances:Create("Frame", {
-            Parent = SliderItem.Section.Items["Content"].Instance,
-            Name = "\0",
-            BackgroundTransparency = 1,
-            Size = UDim2New(1, 0, 0, 45),
-            BorderSizePixel = 0,
-            BackgroundColor3 = FromRGB(255, 255, 255)
-        })
-
-        Items["Text"] = Instances:Create("TextLabel", {
-            Parent = Items["Slider"].Instance,
-            Name = "\0",
-            FontFace = Library.Font,
-            TextColor3 = FromRGB(240, 240, 240),
-            Text = SliderItem.Name,
-            Size = UDim2New(1, -80, 0, 20),
-            Position = UDim2New(0, 0, 0, 0),
-            BackgroundTransparency = 1,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            ZIndex = 2,
-            TextSize = 14,
-        }) Items["Text"]:AddToTheme({TextColor3 = "Text"})
-
-        Items["Value"] = Instances:Create("TextLabel", {
-            Parent = Items["Slider"].Instance,
-            Name = "\0",
-            FontFace = Library.Font,
-            TextColor3 = Library.Theme.Accent,
-            Text = tostring(SliderItem.Default) .. SliderItem.Suffix,
-            Size = UDim2New(0, 70, 0, 20),
-            Position = UDim2New(1, -70, 0, 0),
-            BackgroundTransparency = 1,
-            TextXAlignment = Enum.TextXAlignment.Right,
-            ZIndex = 2,
-            TextSize = 13,
-        }) Items["Value"]:AddToTheme({TextColor3 = "Accent"})
-
-        Items["BarBG"] = Instances:Create("Frame", {
-            Parent = Items["Slider"].Instance,
-            Name = "\0",
-            Size = UDim2New(1, -20, 0, 4),
-            Position = UDim2New(0, 10, 0, 28),
-            BackgroundColor3 = FromRGB(40, 40, 50),
-            BorderSizePixel = 0,
-            ZIndex = 2
-        })
-        Instances:Create("UICorner", { Parent = Items["BarBG"].Instance, CornerRadius = UDimNew(1, 0) })
-
-        Items["BarFill"] = Instances:Create("Frame", {
-            Parent = Items["BarBG"].Instance,
-            Name = "\0",
-            Size = UDim2New(0, 0, 1, 0),
-            BackgroundColor3 = Library.Theme.Accent,
-            BorderSizePixel = 0,
-            ZIndex = 3
-        })
-        Instances:Create("UICorner", { Parent = Items["BarFill"].Instance, CornerRadius = UDimNew(1, 0) })
-
-        Items["Dragger"] = Instances:Create("TextButton", {
-            Parent = Items["BarBG"].Instance,
-            Name = "\0",
-            Size = UDim2New(0, 12, 0, 12),
-            Position = UDim2New(0, -6, 0, -4),
-            BackgroundColor3 = Library.Theme.Text,
-            BorderSizePixel = 0,
-            Text = "",
-            AutoButtonColor = false,
-            ZIndex = 4
-        })
-        Items["Dragger"]:AddToTheme({BackgroundColor3 = "Text"})
-        Instances:Create("UICorner", { Parent = Items["Dragger"].Instance, CornerRadius = UDimNew(1, 0) })
-    end
-
-    local function UpdateValue(NewValue)
-        SliderItem.Value = MathClamp(NewValue, SliderItem.Min, SliderItem.Max)
-        local Percent = (SliderItem.Value - SliderItem.Min) / (SliderItem.Max - SliderItem.Min)
-        Items["BarFill"].Instance.Size = UDim2New(Percent, 0, 1, 0)
-        Items["Dragger"].Instance.Position = UDim2New(Percent, -6, 0, -4)
-        Items["Value"].Instance.Text = tostring(math.floor(SliderItem.Value)) .. SliderItem.Suffix
-        Library.Flags[SliderItem.Flag] = SliderItem.Value
-        Library:SafeCall(SliderItem.Callback, SliderItem.Value)
-    end
-
-    UpdateValue(SliderItem.Default)
-
-    local Dragging = false
-    Items["Dragger"]:Connect("InputBegan", function(Input)
-        if Input.UserInputType == Enum.UserInputType.MouseButton1 then
-            Dragging = true
-        end
-    end)
-
-    Library:Connect(UserInputService.InputChanged, function(Input)
-        if Dragging and Input.UserInputType == Enum.UserInputType.MouseMovement then
-            local MousePos = Input.Position.X
-            local BarPos = Items["BarBG"].Instance.AbsolutePosition.X
-            local BarWidth = Items["BarBG"].Instance.AbsoluteSize.X
-            local Percent = MathClamp((MousePos - BarPos) / BarWidth, 0, 1)
-            local NewValue = SliderItem.Min + (SliderItem.Max - SliderItem.Min) * Percent
-            UpdateValue(NewValue)
-        end
-    end)
-
-    Library:Connect(UserInputService.InputEnded, function(Input)
-        if Input.UserInputType == Enum.UserInputType.MouseButton1 then
-            Dragging = false
-        end
-    end)
-
-    function SliderItem:Set(Value)
-        UpdateValue(Value)
-    end
-
-    function SliderItem:Get()
-        return SliderItem.Value
-    end
-
-    Library.SetFlags[SliderItem.Flag] = function(Value)
-        SliderItem:Set(Value)
-    end
-
-    SliderItem.Section.Elements[#SliderItem.Section.Elements + 1] = SliderItem
-    return SliderItem
-end
-
--- ==================== SWITCH (CORREGIDO) ====================
-Library.Sections.Switch = function(self, Data)
-    Data = Data or {}
-
-    local SwitchItem = {
-        Window = self.Window,
-        Page = self.Page,
-        Section = self,
-        Name = Data.Name or "Switch",
-        Flag = Data.Flag or Library:NextFlag(),
-        Default = Data.Default or false,
-        Callback = Data.Callback or function() end,
-        Value = nil
-    }
-
-    local Items = {} do
-        Items["Switch"] = Instances:Create("Frame", {
-            Parent = SwitchItem.Section.Items["Content"].Instance,
-            Name = "\0",
-            BackgroundTransparency = 1,
-            Size = UDim2New(1, 0, 0, 30),
-            BorderSizePixel = 0,
-            BackgroundColor3 = FromRGB(255, 255, 255)
-        })
-
-        Items["Text"] = Instances:Create("TextLabel", {
-            Parent = Items["Switch"].Instance,
-            Name = "\0",
-            FontFace = Library.Font,
-            TextColor3 = FromRGB(240, 240, 240),
-            Text = SwitchItem.Name,
-            Size = UDim2New(1, -60, 0, 30),
-            Position = UDim2New(0, 0, 0, 0),
-            BackgroundTransparency = 1,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            ZIndex = 2,
-            TextSize = 14,
-        }) Items["Text"]:AddToTheme({TextColor3 = "Text"})
-
-        Items["SwitchBG"] = Instances:Create("TextButton", {
-            Parent = Items["Switch"].Instance,
-            Name = "\0",
-            Size = UDim2New(0, 44, 0, 24),
-            Position = UDim2New(1, -54, 0, 3),
-            BackgroundColor3 = FromRGB(60, 60, 70),
-            BorderSizePixel = 0,
-            AutoButtonColor = false,
-            Text = "",
-            ZIndex = 2
-        })
-        Items["SwitchBG"]:AddToTheme({BackgroundColor3 = "Element"})
-        Instances:Create("UICorner", { Parent = Items["SwitchBG"].Instance, CornerRadius = UDimNew(1, 0) })
-
-        Items["SwitchKnob"] = Instances:Create("Frame", {
-            Parent = Items["SwitchBG"].Instance,
-            Name = "\0",
-            Size = UDim2New(0, 20, 0, 20),
-            Position = UDim2New(0, 2, 0, 2),
-            BackgroundColor3 = Library.Theme.Text,
-            BorderSizePixel = 0,
-            ZIndex = 3
-        })
-        Items["SwitchKnob"]:AddToTheme({BackgroundColor3 = "Text"})
-        Instances:Create("UICorner", { Parent = Items["SwitchKnob"].Instance, CornerRadius = UDimNew(1, 0) })
-    end
-
-    local function UpdateState(State)
-        SwitchItem.Value = State
-        if State then
-            Items["SwitchBG"]:Tween(nil, {BackgroundColor3 = Library.Theme.Accent})
-            Items["SwitchKnob"]:Tween(nil, {Position = UDim2New(1, -22, 0, 2)})
-        else
-            Items["SwitchBG"]:Tween(nil, {BackgroundColor3 = FromRGB(60, 60, 70)})
-            Items["SwitchKnob"]:Tween(nil, {Position = UDim2New(0, 2, 0, 2)})
-        end
-        Library.Flags[SwitchItem.Flag] = State
-        Library:SafeCall(SwitchItem.Callback, State)
-    end
-
-    UpdateState(SwitchItem.Default)
-
-    -- CLICK FUNCIONA AHORA
-    Items["SwitchBG"]:Connect("MouseButton1Down", function()
-        UpdateState(not SwitchItem.Value)
-    end)
-
-    function SwitchItem:Set(State)
-        UpdateState(State)
-    end
-
-    function SwitchItem:Get()
-        return SwitchItem.Value
-    end
-
-    Library.SetFlags[SwitchItem.Flag] = function(Value)
-        SwitchItem:Set(Value)
-    end
-
-    SwitchItem.Section.Elements[#SwitchItem.Section.Elements + 1] = SwitchItem
-    return SwitchItem
-end
 
     Library.CreateSettingsPage = function(self, Window, KeybindList)
         local Page = Window:Page({Name = "Settings", Icon = "122669828593160"})
@@ -8880,534 +7662,287 @@ end
 
         return Page
     end
--- ============================================
--- KEY SYSTEM (CON BOTÓN COPY LINK)
--- ============================================
-Library.KeySystem = function(self, Data)
+
+-- ==================== SWITCH ====================
+Library.Sections.Switch = function(self, Data)
     Data = Data or {}
-
-    local KeySystem = {
-        Key         = Data.Key or Data.key or "",
-        Keys        = Data.Keys or Data.keys or {},
-        Title       = Data.Title or Data.title or "Key System",
-        SubTitle    = Data.SubTitle or Data.subtitle or "Enter your key to continue",
-        Note        = Data.Note or Data.note or "Get your key at discord.gg/example",
-        KeyLink     = Data.KeyLink or Data.keylink or Data.Link or Data.link or "",  -- Enlace para obtener key
-        SaveKey     = Data.SaveKey ~= false,
-        FileName    = Data.FileName or Data.filename or "savedkey",
-        Callback    = Data.Callback or Data.callback or function() end,
-        Verified    = false
+    local SwitchItem = {
+        Window = self.Window, Page = self.Page, Section = self,
+        Name = Data.Name or "Switch", Flag = Data.Flag or Library:NextFlag(),
+        Default = Data.Default or false, Callback = Data.Callback or function() end, Value = nil
     }
-
-    if KeySystem.Key ~= "" then
-        table.insert(KeySystem.Keys, KeySystem.Key)
+    local Items = {} do
+        Items["Main"] = Instances:Create("Frame", { Parent = SwitchItem.Section.Items["Content"].Instance, BackgroundTransparency = 1, Size = UDim2New(1, 0, 0, 30), BorderSizePixel = 0 })
+        Items["Text"] = Instances:Create("TextLabel", { Parent = Items["Main"].Instance, FontFace = Library.Font, TextColor3 = FromRGB(240, 240, 240), Text = SwitchItem.Name, Size = UDim2New(1, -60, 0, 30), BackgroundTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, TextSize = 14, ZIndex = 2 })
+        Items["Text"]:AddToTheme({TextColor3 = "Text"})
+        Items["BG"] = Instances:Create("TextButton", { Parent = Items["Main"].Instance, Size = UDim2New(0, 44, 0, 24), Position = UDim2New(1, -54, 0, 3), BackgroundColor3 = FromRGB(60, 60, 70), BorderSizePixel = 0, AutoButtonColor = false, Text = "", ZIndex = 2 })
+        Items["BG"]:AddToTheme({BackgroundColor3 = "Element"})
+        Instances:Create("UICorner", { Parent = Items["BG"].Instance, CornerRadius = UDimNew(1, 0) })
+        Items["Knob"] = Instances:Create("Frame", { Parent = Items["BG"].Instance, Size = UDim2New(0, 20, 0, 20), Position = UDim2New(0, 2, 0, 2), BackgroundColor3 = Library.Theme.Text, BorderSizePixel = 0, ZIndex = 3 })
+        Items["Knob"]:AddToTheme({BackgroundColor3 = "Text"})
+        Instances:Create("UICorner", { Parent = Items["Knob"].Instance, CornerRadius = UDimNew(1, 0) })
     end
-
-    local KeyFilePath = Library.Folders.Directory .. "/" .. KeySystem.FileName .. ".txt"
-
-    local function ValidateKey(Input)
-        for _, k in ipairs(KeySystem.Keys) do
-            if tostring(Input) == tostring(k) then
-                return true
-            end
-        end
-        return false
+    local function Update(State)
+        SwitchItem.Value = State
+        if State then Items["BG"]:Tween(nil, {BackgroundColor3 = Library.Theme.Accent}) Items["Knob"]:Tween(nil, {Position = UDim2New(1, -22, 0, 2)})
+        else Items["BG"]:Tween(nil, {BackgroundColor3 = FromRGB(60, 60, 70)}) Items["Knob"]:Tween(nil, {Position = UDim2New(0, 2, 0, 2)}) end
+        Library.Flags[SwitchItem.Flag] = State Library:SafeCall(SwitchItem.Callback, State)
     end
+    Update(SwitchItem.Default)
+    Items["BG"]:Connect("MouseButton1Down", function() Update(not SwitchItem.Value) end)
+    function SwitchItem:Set(State) Update(State) end
+    function SwitchItem:Get() return SwitchItem.Value end
+    Library.SetFlags[SwitchItem.Flag] = function(Value) SwitchItem:Set(Value) end
+    SwitchItem.Section.Elements[#SwitchItem.Section.Elements + 1] = SwitchItem
+    return SwitchItem
+ end
 
-    if KeySystem.SaveKey and isfile(KeyFilePath) then
-        local Saved = readfile(KeyFilePath)
-        if ValidateKey(Saved) then
-            KeySystem.Verified = true
-            Library:SafeCall(KeySystem.Callback)
-            return KeySystem
-        end
+-- ==================== NUMBERSLIDER ====================
+Library.Sections.NumberSlider = function(self, Data)
+    Data = Data or {}
+    local Slider = {
+        Window = self.Window, Page = self.Page, Section = self,
+        Name = Data.Name or "Slider", Flag = Data.Flag or Library:NextFlag(),
+        Min = Data.Min or 0, Max = Data.Max or 100, Default = Data.Default or 50,
+        Suffix = Data.Suffix or "", Callback = Data.Callback or function() end, Value = nil
+    }
+    local Items = {} do
+        Items["Main"] = Instances:Create("Frame", { Parent = Slider.Section.Items["Content"].Instance, BackgroundTransparency = 1, Size = UDim2New(1, 0, 0, 45), BorderSizePixel = 0 })
+        Items["Text"] = Instances:Create("TextLabel", { Parent = Items["Main"].Instance, FontFace = Library.Font, TextColor3 = FromRGB(240, 240, 240), Text = Slider.Name, Size = UDim2New(1, -80, 0, 20), BackgroundTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, TextSize = 14, ZIndex = 2 })
+        Items["Text"]:AddToTheme({TextColor3 = "Text"})
+        Items["Value"] = Instances:Create("TextLabel", { Parent = Items["Main"].Instance, FontFace = Library.Font, TextColor3 = Library.Theme.Accent, Text = tostring(Slider.Default)..Slider.Suffix, Size = UDim2New(0, 70, 0, 20), Position = UDim2New(1, -70, 0, 0), BackgroundTransparency = 1, TextXAlignment = Enum.TextXAlignment.Right, TextSize = 13, ZIndex = 2 })
+        Items["Value"]:AddToTheme({TextColor3 = "Accent"})
+        Items["BarBG"] = Instances:Create("Frame", { Parent = Items["Main"].Instance, Size = UDim2New(1, -20, 0, 4), Position = UDim2New(0, 10, 0, 28), BackgroundColor3 = FromRGB(40, 40, 50), BorderSizePixel = 0, ZIndex = 2 })
+        Instances:Create("UICorner", { Parent = Items["BarBG"].Instance, CornerRadius = UDimNew(1, 0) })
+        Items["BarFill"] = Instances:Create("Frame", { Parent = Items["BarBG"].Instance, Size = UDim2New(0, 0, 1, 0), BackgroundColor3 = Library.Theme.Accent, BorderSizePixel = 0, ZIndex = 3 })
+        Instances:Create("UICorner", { Parent = Items["BarFill"].Instance, CornerRadius = UDimNew(1, 0) })
+        Items["Dragger"] = Instances:Create("TextButton", { Parent = Items["BarBG"].Instance, Size = UDim2New(0, 12, 0, 12), Position = UDim2New(0, -6, 0, -4), BackgroundColor3 = Library.Theme.Text, BorderSizePixel = 0, Text = "", AutoButtonColor = false, ZIndex = 4 })
+        Items["Dragger"]:AddToTheme({BackgroundColor3 = "Text"})
+        Instances:Create("UICorner", { Parent = Items["Dragger"].Instance, CornerRadius = UDimNew(1, 0) })
     end
-
-    -- Crear GUI
-    local KeyGui = Instances:Create("ScreenGui", {
-        Parent = gethui(),
-        Name = "KeySystem",
-        ZIndexBehavior = Enum.ZIndexBehavior.Global,
-        DisplayOrder = 100,
-        ResetOnSpawn = false
-    })
-
-    -- Overlay
-    local Overlay = Instances:Create("Frame", {
-        Parent = KeyGui.Instance,
-        Size = UDim2New(1, 0, 1, 0),
-        BackgroundColor3 = FromRGB(0, 0, 0),
-        BackgroundTransparency = 0.4,
-        BorderSizePixel = 0,
-        ZIndex = 1
-    })
-
-    -- Ventana principal (más alta para el nuevo botón)
-    local WindowFrame = Instances:Create("Frame", {
-        Parent = KeyGui.Instance,
-        Size = UDim2New(0, 360, 0, 270),
-        AnchorPoint = Vector2New(0.5, 0.5),
-        Position = UDim2New(0.5, 0, 0.5, 0),
-        BackgroundColor3 = FromRGB(12, 12, 14),
-        BorderSizePixel = 0,
-        ZIndex = 2
-    })
-    WindowFrame:AddToTheme({BackgroundColor3 = "Background"})
-
-    Instances:Create("UICorner", {
-        Parent = WindowFrame.Instance,
-        CornerRadius = UDimNew(0, 8)
-    })
-
-    Instances:Create("UIStroke", {
-        Parent = WindowFrame.Instance,
-        Color = FromRGB(25, 25, 28),
-        Thickness = 1,
-        ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    })
-
-    -- Barra de acento
-    local AccentBar = Instances:Create("Frame", {
-        Parent = WindowFrame.Instance,
-        Size = UDim2New(1, 0, 0, 2),
-        BackgroundColor3 = Library.Theme.Accent,
-        BorderSizePixel = 0,
-        ZIndex = 3
-    })
-    Instances:Create("UICorner", {
-        Parent = AccentBar.Instance,
-        CornerRadius = UDimNew(0, 8)
-    })
-    Instances:Create("UIGradient", {
-        Parent = AccentBar.Instance,
-        Color = RGBSequence{
-            RGBSequenceKeypoint(0, Library.Theme.Accent),
-            RGBSequenceKeypoint(1, Library.Theme.AccentGradient)
-        }
-    }):AddToTheme({Color = function()
-        return RGBSequence{
-            RGBSequenceKeypoint(0, Library.Theme.Accent),
-            RGBSequenceKeypoint(1, Library.Theme.AccentGradient)
-        }
-    end})
-
-    -- Título
-    Instances:Create("TextLabel", {
-        Parent = WindowFrame.Instance,
-        FontFace = Library.Font,
-        Text = KeySystem.Title,
-        TextColor3 = FromRGB(235, 235, 235),
-        TextSize = 16,
-        Size = UDim2New(1, -20, 0, 20),
-        Position = UDim2New(0, 15, 0, 18),
-        BackgroundTransparency = 1,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        ZIndex = 3
-    }):AddToTheme({TextColor3 = "Text"})
-
-    -- Subtítulo
-    Instances:Create("TextLabel", {
-        Parent = WindowFrame.Instance,
-        FontFace = Library.Font,
-        Text = KeySystem.SubTitle,
-        TextColor3 = FromRGB(235, 235, 235),
-        TextTransparency = 0.5,
-        TextSize = 13,
-        Size = UDim2New(1, -20, 0, 15),
-        Position = UDim2New(0, 15, 0, 40),
-        BackgroundTransparency = 1,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        ZIndex = 3
-    }):AddToTheme({TextColor3 = "Text"})
-
-    -- Separador
-    Instances:Create("Frame", {
-        Parent = WindowFrame.Instance,
-        Size = UDim2New(1, -30, 0, 1),
-        Position = UDim2New(0, 15, 0, 65),
-        BackgroundColor3 = FromRGB(25, 25, 28),
-        BorderSizePixel = 0,
-        ZIndex = 3
-    }):AddToTheme({BackgroundColor3 = "Outline"})
-
-    -- Input
-    local InputBG = Instances:Create("Frame", {
-        Parent = WindowFrame.Instance,
-        Size = UDim2New(1, -30, 0, 36),
-        Position = UDim2New(0, 15, 0, 80),
-        BackgroundColor3 = FromRGB(16, 16, 18),
-        BorderSizePixel = 0,
-        ZIndex = 3
-    })
-    InputBG:AddToTheme({BackgroundColor3 = "Element"})
-    Instances:Create("UICorner", {
-        Parent = InputBG.Instance,
-        CornerRadius = UDimNew(0, 6)
-    })
-
-    local InputBox = Instances:Create("TextBox", {
-        Parent = InputBG.Instance,
-        FontFace = Library.Font,
-        Text = "",
-        PlaceholderText = "Enter key...",
-        PlaceholderColor3 = FromRGB(100, 100, 110),
-        TextColor3 = FromRGB(235, 235, 235),
-        TextSize = 14,
-        Size = UDim2New(1, -16, 1, 0),
-        Position = UDim2New(0, 10, 0, 0),
-        BackgroundTransparency = 1,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        ClearTextOnFocus = false,
-        ZIndex = 4
-    })
-    InputBox:AddToTheme({TextColor3 = "Text"})
-
-    -- Nota (con enlace clickeable visualmente)
-    local NoteLabel = Instances:Create("TextLabel", {
-        Parent = WindowFrame.Instance,
-        FontFace = Library.Font,
-        Text = KeySystem.Note,
-        TextColor3 = FromRGB(235, 235, 235),
-        TextTransparency = 0.6,
-        TextSize = 12,
-        Size = UDim2New(1, -30, 0, 15),
-        Position = UDim2New(0, 15, 0, 125),
-        BackgroundTransparency = 1,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        ZIndex = 3
-    })
-
-    -- ==================== NUEVO: BOTÓN COPY LINK ====================
-    if KeySystem.KeyLink and KeySystem.KeyLink ~= "" then
-        local CopyLinkBtn = Instances:Create("TextButton", {
-            Parent = WindowFrame.Instance,
-            FontFace = Library.Font,
-            Text = "📋 Copy Key Link",
-            TextColor3 = FromRGB(235, 235, 235),
-            TextSize = 12,
-            Size = UDim2New(1, -30, 0, 28),
-            Position = UDim2New(0, 15, 0, 148),
-            BackgroundColor3 = FromRGB(20, 20, 25),
-            BorderSizePixel = 0,
-            AutoButtonColor = false,
-            ZIndex = 3
-        })
-        CopyLinkBtn:AddToTheme({BackgroundColor3 = "Element"})
-        Instances:Create("UICorner", {
-            Parent = CopyLinkBtn.Instance,
-            CornerRadius = UDimNew(0, 6)
-        })
-
-        CopyLinkBtn:OnHover(function()
-            CopyLinkBtn:Tween(nil, {BackgroundColor3 = FromRGB(35, 35, 45)})
-        end)
-        CopyLinkBtn:OnHoverLeave(function()
-            CopyLinkBtn:Tween(nil, {BackgroundColor3 = FromRGB(20, 20, 25)})
-        end)
-
-        CopyLinkBtn:Connect("MouseButton1Down", function()
-            setclipboard(KeySystem.KeyLink)
-            -- Mostrar feedback temporal
-            local oldText = CopyLinkBtn.Instance.Text
-            CopyLinkBtn.Instance.Text = "✓ Copied!"
-            task.wait(1)
-            CopyLinkBtn.Instance.Text = oldText
-        end)
-
-        -- Ajustar posición del mensaje de estado
-        StatusLabel = Instances:Create("TextLabel", {
-            Parent = WindowFrame.Instance,
-            FontFace = Library.Font,
-            Text = "",
-            TextColor3 = FromRGB(255, 80, 80),
-            TextSize = 12,
-            Size = UDim2New(1, -30, 0, 15),
-            Position = UDim2New(0, 15, 0, 185),
-            BackgroundTransparency = 1,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            ZIndex = 3
-        })
-
-        -- Ajustar posición del botón Confirm
-        local ConfirmBtn = Instances:Create("TextButton", {
-            Parent = WindowFrame.Instance,
-            FontFace = Library.Font,
-            Text = "Confirm",
-            TextColor3 = FromRGB(0, 0, 0),
-            TextSize = 14,
-            Size = UDim2New(0, 130, 0, 32),
-            AnchorPoint = Vector2New(1, 1),
-            Position = UDim2New(1, -15, 1, -15),
-            BackgroundColor3 = Library.Theme.Accent,
-            BorderSizePixel = 0,
-            AutoButtonColor = false,
-            ZIndex = 3
-        })
-        Instances:Create("UICorner", {
-            Parent = ConfirmBtn.Instance,
-            CornerRadius = UDimNew(0, 6)
-        })
-        Instances:Create("UIGradient", {
-            Parent = ConfirmBtn.Instance,
-            Color = RGBSequence{
-                RGBSequenceKeypoint(0, Library.Theme.Accent),
-                RGBSequenceKeypoint(1, Library.Theme.AccentGradient)
-            }
-        }):AddToTheme({Color = function()
-            return RGBSequence{
-                RGBSequenceKeypoint(0, Library.Theme.Accent),
-                RGBSequenceKeypoint(1, Library.Theme.AccentGradient)
-            }
-        end})
-
-        -- Botón Paste
-        local PasteBtn = Instances:Create("TextButton", {
-            Parent = WindowFrame.Instance,
-            FontFace = Library.Font,
-            Text = "Paste",
-            TextColor3 = FromRGB(235, 235, 235),
-            TextTransparency = 0.3,
-            TextSize = 14,
-            Size = UDim2New(0, 90, 0, 32),
-            AnchorPoint = Vector2New(0, 1),
-            Position = UDim2New(0, 15, 1, -15),
-            BackgroundColor3 = FromRGB(16, 16, 18),
-            BorderSizePixel = 0,
-            AutoButtonColor = false,
-            ZIndex = 3
-        })
-        PasteBtn:AddToTheme({BackgroundColor3 = "Element"})
-        Instances:Create("UICorner", {
-            Parent = PasteBtn.Instance,
-            CornerRadius = UDimNew(0, 6)
-        })
-
-        -- Hover effects
-        ConfirmBtn:OnHover(function()
-            ConfirmBtn:Tween(TweenInfo.new(0.2), { Size = UDim2New(0, 135, 0, 34) })
-        end)
-        ConfirmBtn:OnHoverLeave(function()
-            ConfirmBtn:Tween(TweenInfo.new(0.2), { Size = UDim2New(0, 130, 0, 32) })
-        end)
-
-        PasteBtn:OnHover(function()
-            PasteBtn:Tween(nil, { TextTransparency = 0 })
-        end)
-        PasteBtn:OnHoverLeave(function()
-            PasteBtn:Tween(nil, { TextTransparency = 0.3 })
-        end)
-
-        -- Paste logic
-        PasteBtn:Connect("MouseButton1Down", function()
-            local ok, clip = pcall(function() return getclipboard() end)
-            if ok and clip then
-                InputBox.Instance.Text = clip
-            end
-        end)
-
-        -- Confirm logic
-        local function TryConfirm()
-            local Input = InputBox.Instance.Text
-
-            if ValidateKey(Input) then
-                StatusLabel.Instance.TextColor3 = FromRGB(80, 255, 120)
-                StatusLabel.Instance.Text = "✓ Key accepted!"
-                KeySystem.Verified = true
-
-                if KeySystem.SaveKey then
-                    writefile(KeyFilePath, Input)
-                end
-
-                task.wait(0.6)
-
-                -- Fade out
-                local Descendants = KeyGui.Instance:GetDescendants()
-                table.insert(Descendants, KeyGui.Instance)
-                for _, v in Descendants do
-                    pcall(function()
-                        if v:IsA("Frame") then
-                            Tween:Create(v, TweenInfo.new(0.4), { BackgroundTransparency = 1 }, true)
-                        elseif v:IsA("TextLabel") or v:IsA("TextButton") then
-                            Tween:Create(v, TweenInfo.new(0.4), { BackgroundTransparency = 1, TextTransparency = 1 }, true)
-                        elseif v:IsA("TextBox") then
-                            Tween:Create(v, TweenInfo.new(0.4), { BackgroundTransparency = 1, TextTransparency = 1 }, true)
-                        elseif v:IsA("ImageLabel") then
-                            Tween:Create(v, TweenInfo.new(0.4), { BackgroundTransparency = 1, ImageTransparency = 1 }, true)
-                        end
-                    end)
-                end
-
-                task.wait(0.5)
-                KeyGui:Clean()
-                Library:SafeCall(KeySystem.Callback)
-            else
-                StatusLabel.Instance.TextColor3 = FromRGB(255, 80, 80)
-                StatusLabel.Instance.Text = "✗ Invalid key. Try again."
-
-                -- Shake animation
-                Library:Thread(function()
-                    local OrigPos = WindowFrame.Instance.Position
-                    for i = 1, 4 do
-                        WindowFrame:Tween(TweenInfo.new(0.05), {
-                            Position = UDim2New(OrigPos.X.Scale, OrigPos.X.Offset + (i % 2 == 0 and 8 or -8), OrigPos.Y.Scale, OrigPos.Y.Offset)
-                        })
-                        task.wait(0.05)
-                    end
-                    WindowFrame:Tween(TweenInfo.new(0.1), { Position = OrigPos })
-                end)
-            end
-        end
-
-        ConfirmBtn:Connect("MouseButton1Down", TryConfirm)
-        InputBox:Connect("FocusLost", function(Enter) if Enter then TryConfirm() end end)
-
-        -- Animación de entrada
-        WindowFrame.Instance.Position = UDim2New(0.5, 0, 0.6, 0)
-        WindowFrame.Instance.BackgroundTransparency = 1
-        WindowFrame:Tween(TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-            Position = UDim2New(0.5, 0, 0.5, 0),
-            BackgroundTransparency = 0
-        })
-
-    else
-        -- Si no hay KeyLink, versión simple (sin botón copy)
-        StatusLabel = Instances:Create("TextLabel", {
-            Parent = WindowFrame.Instance,
-            FontFace = Library.Font,
-            Text = "",
-            TextColor3 = FromRGB(255, 80, 80),
-            TextSize = 12,
-            Size = UDim2New(1, -30, 0, 15),
-            Position = UDim2New(0, 15, 0, 148),
-            BackgroundTransparency = 1,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            ZIndex = 3
-        })
-
-        local ConfirmBtn = Instances:Create("TextButton", {
-            Parent = WindowFrame.Instance,
-            FontFace = Library.Font,
-            Text = "Confirm",
-            TextColor3 = FromRGB(0, 0, 0),
-            TextSize = 14,
-            Size = UDim2New(0, 140, 0, 32),
-            AnchorPoint = Vector2New(1, 1),
-            Position = UDim2New(1, -15, 1, -15),
-            BackgroundColor3 = Library.Theme.Accent,
-            BorderSizePixel = 0,
-            AutoButtonColor = false,
-            ZIndex = 3
-        })
-        Instances:Create("UICorner", {
-            Parent = ConfirmBtn.Instance,
-            CornerRadius = UDimNew(0, 6)
-        })
-
-        local PasteBtn = Instances:Create("TextButton", {
-            Parent = WindowFrame.Instance,
-            FontFace = Library.Font,
-            Text = "Paste",
-            TextColor3 = FromRGB(235, 235, 235),
-            TextTransparency = 0.3,
-            TextSize = 14,
-            Size = UDim2New(0, 100, 0, 32),
-            AnchorPoint = Vector2New(0, 1),
-            Position = UDim2New(0, 15, 1, -15),
-            BackgroundColor3 = FromRGB(16, 16, 18),
-            BorderSizePixel = 0,
-            AutoButtonColor = false,
-            ZIndex = 3
-        })
-        PasteBtn:AddToTheme({BackgroundColor3 = "Element"})
-        Instances:Create("UICorner", {
-            Parent = PasteBtn.Instance,
-            CornerRadius = UDimNew(0, 6)
-        })
-
-        ConfirmBtn:OnHover(function()
-            ConfirmBtn:Tween(TweenInfo.new(0.2), { Size = UDim2New(0, 145, 0, 34) })
-        end)
-        ConfirmBtn:OnHoverLeave(function()
-            ConfirmBtn:Tween(TweenInfo.new(0.2), { Size = UDim2New(0, 140, 0, 32) })
-        end)
-
-        PasteBtn:OnHover(function()
-            PasteBtn:Tween(nil, { TextTransparency = 0 })
-        end)
-        PasteBtn:OnHoverLeave(function()
-            PasteBtn:Tween(nil, { TextTransparency = 0.3 })
-        end)
-
-        PasteBtn:Connect("MouseButton1Down", function()
-            local ok, clip = pcall(function() return getclipboard() end)
-            if ok and clip then
-                InputBox.Instance.Text = clip
-            end
-        end)
-
-        local function TryConfirm()
-            local Input = InputBox.Instance.Text
-
-            if ValidateKey(Input) then
-                StatusLabel.Instance.TextColor3 = FromRGB(80, 255, 120)
-                StatusLabel.Instance.Text = "✓ Key accepted!"
-                KeySystem.Verified = true
-
-                if KeySystem.SaveKey then
-                    writefile(KeyFilePath, Input)
-                end
-
-                task.wait(0.6)
-
-                local Descendants = KeyGui.Instance:GetDescendants()
-                table.insert(Descendants, KeyGui.Instance)
-                for _, v in Descendants do
-                    pcall(function()
-                        if v:IsA("Frame") then
-                            Tween:Create(v, TweenInfo.new(0.4), { BackgroundTransparency = 1 }, true)
-                        elseif v:IsA("TextLabel") or v:IsA("TextButton") then
-                            Tween:Create(v, TweenInfo.new(0.4), { BackgroundTransparency = 1, TextTransparency = 1 }, true)
-                        elseif v:IsA("TextBox") then
-                            Tween:Create(v, TweenInfo.new(0.4), { BackgroundTransparency = 1, TextTransparency = 1 }, true)
-                        elseif v:IsA("ImageLabel") then
-                            Tween:Create(v, TweenInfo.new(0.4), { BackgroundTransparency = 1, ImageTransparency = 1 }, true)
-                        end
-                    end)
-                end
-
-                task.wait(0.5)
-                KeyGui:Clean()
-                Library:SafeCall(KeySystem.Callback)
-            else
-                StatusLabel.Instance.TextColor3 = FromRGB(255, 80, 80)
-                StatusLabel.Instance.Text = "✗ Invalid key. Try again."
-
-                Library:Thread(function()
-                    local OrigPos = WindowFrame.Instance.Position
-                    for i = 1, 4 do
-                        WindowFrame:Tween(TweenInfo.new(0.05), {
-                            Position = UDim2New(OrigPos.X.Scale, OrigPos.X.Offset + (i % 2 == 0 and 8 or -8), OrigPos.Y.Scale, OrigPos.Y.Offset)
-                        })
-                        task.wait(0.05)
-                    end
-                    WindowFrame:Tween(TweenInfo.new(0.1), { Position = OrigPos })
-                end)
-            end
-        end
-
-        ConfirmBtn:Connect("MouseButton1Down", TryConfirm)
-        InputBox:Connect("FocusLost", function(Enter) if Enter then TryConfirm() end end)
-
-        WindowFrame.Instance.Position = UDim2New(0.5, 0, 0.6, 0)
-        WindowFrame.Instance.BackgroundTransparency = 1
-        WindowFrame:Tween(TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-            Position = UDim2New(0.5, 0, 0.5, 0),
-            BackgroundTransparency = 0
-        })
+    local function Update(Val)
+        Slider.Value = MathClamp(Val, Slider.Min, Slider.Max)
+        local Pct = (Slider.Value - Slider.Min) / (Slider.Max - Slider.Min)
+        Items["BarFill"].Instance.Size = UDim2New(Pct, 0, 1, 0)
+        Items["Dragger"].Instance.Position = UDim2New(Pct, -6, 0, -4)
+        Items["Value"].Instance.Text = tostring(math.floor(Slider.Value))..Slider.Suffix
+        Library.Flags[Slider.Flag] = Slider.Value
+        Library:SafeCall(Slider.Callback, Slider.Value)
     end
-
-    return KeySystem
+    Update(Slider.Default)
+    local Dragging = false
+    Items["Dragger"]:Connect("InputBegan", function(Input) if Input.UserInputType == Enum.UserInputType.MouseButton1 then Dragging = true end end)
+    Library:Connect(UserInputService.InputChanged, function(Input)
+        if Dragging and Input.UserInputType == Enum.UserInputType.MouseMovement then
+            local Pct = MathClamp((Input.Position.X - Items["BarBG"].Instance.AbsolutePosition.X) / Items["BarBG"].Instance.AbsoluteSize.X, 0, 1)
+            Update(Slider.Min + (Slider.Max - Slider.Min) * Pct)
+        end
+    end)
+    Library:Connect(UserInputService.InputEnded, function(Input) if Input.UserInputType == Enum.UserInputType.MouseButton1 then Dragging = false end end)
+    function Slider:Set(Val) Update(Val) end
+    function Slider:Get() return Slider.Value end
+    Library.SetFlags[Slider.Flag] = function(Val) Slider:Set(Val) end
+    Slider.Section.Elements[#Slider.Section.Elements + 1] = Slider
+    return Slider
    end
+
+-- ==================== CODE ====================
+Library.Sections.Code = function(self, Data)
+    Data = Data or {}
+    local CodeItem = {
+        Window = self.Window, Page = self.Page, Section = self,
+        Title = Data.Title or "Code", Code = Data.Code or "", OnCopy = Data.OnCopy or function() end
+    }
+    local Items = {} do
+        Items["Container"] = Instances:Create("Frame", { Parent = CodeItem.Section.Items["Content"].Instance, BackgroundTransparency = 1, Size = UDim2New(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BorderSizePixel = 0 })
+        Items["Title"] = Instances:Create("TextLabel", { Parent = Items["Container"].Instance, FontFace = Library.Font, TextColor3 = FromRGB(240, 240, 240), TextTransparency = 0.3, Text = CodeItem.Title, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2New(0, 0, 0, 15), BackgroundTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, TextSize = 14, ZIndex = 2 })
+        Items["Title"]:AddToTheme({TextColor3 = "Text"})
+        Items["CodeBG"] = Instances:Create("Frame", { Parent = Items["Container"].Instance, Size = UDim2New(1, -20, 0, 0), Position = UDim2New(0, 10, 0, 22), BackgroundColor3 = FromRGB(18, 18, 22), BorderSizePixel = 0, AutomaticSize = Enum.AutomaticSize.Y, ZIndex = 2 })
+        Items["CodeBG"]:AddToTheme({BackgroundColor3 = "Element"})
+        Instances:Create("UICorner", { Parent = Items["CodeBG"].Instance, CornerRadius = UDimNew(0, 6) })
+        Instances:Create("UIPadding", { Parent = Items["CodeBG"].Instance, PaddingTop = UDimNew(0, 10), PaddingBottom = UDimNew(0, 10), PaddingLeft = UDimNew(0, 12), PaddingRight = UDimNew(0, 12) })
+        Items["CodeText"] = Instances:Create("TextLabel", { Parent = Items["CodeBG"].Instance, FontFace = Font.new("rbxassetid://12187365364", Enum.FontWeight.Regular, Enum.FontStyle.Normal), Text = CodeItem.Code, TextColor3 = FromRGB(180, 220, 180), TextSize = 12, Size = UDim2New(1, -70, 0, 0), BackgroundTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, TextWrapped = true, AutomaticSize = Enum.AutomaticSize.Y, ZIndex = 3 })
+        Items["CopyBtn"] = Instances:Create("TextButton", { Parent = Items["CodeBG"].Instance, FontFace = Library.Font, Text = "Copy", TextColor3 = FromRGB(240, 240, 240), TextSize = 12, Size = UDim2New(0, 55, 0, 28), Position = UDim2New(1, -10, 0, 10), AnchorPoint = Vector2New(1, 0), BackgroundColor3 = Library.Theme.Accent, BackgroundTransparency = 0.15, BorderSizePixel = 0, AutoButtonColor = false, ZIndex = 4 })
+        Items["CopyBtn"]:AddToTheme({BackgroundColor3 = "Accent"})
+        Instances:Create("UICorner", { Parent = Items["CopyBtn"].Instance, CornerRadius = UDimNew(0, 4) })
+        Items["CopyBtn"]:OnHover(function() Items["CopyBtn"]:Tween(nil, {BackgroundTransparency = 0}) end)
+        Items["CopyBtn"]:OnHoverLeave(function() Items["CopyBtn"]:Tween(nil, {BackgroundTransparency = 0.15}) end)
+        Items["CopyBtn"]:Connect("MouseButton1Down", function()
+            setclipboard(CodeItem.Code)
+            Library:Notification({Title = "Copied", Description = "Code copied!", Duration = 2, Icon = "107759198829431"})
+            Library:SafeCall(CodeItem.OnCopy)
+        end)
+    end
+    function CodeItem:SetCode(NewCode) CodeItem.Code = NewCode Items["CodeText"].Instance.Text = NewCode end
+    function CodeItem:Get() return CodeItem.Code end
+    CodeItem.Section.Elements[#CodeItem.Section.Elements + 1] = CodeItem
+    return CodeItem
+end
+
+-- ==================== STEPPER ====================
+Library.Sections.Stepper = function(self, Data)
+    Data = Data or {}
+    local Stepper = {
+        Window = self.Window, Page = self.Page, Section = self,
+        Name = Data.Name or "Stepper", Flag = Data.Flag or Library:NextFlag(),
+        Min = Data.Min or 0, Max = Data.Max or 100, Default = Data.Default or 0,
+        Step = Data.Step or 1, Suffix = Data.Suffix or "", Callback = Data.Callback or function() end, Value = nil
+    }
+    local Items = {} do
+        Items["Main"] = Instances:Create("Frame", { Parent = Stepper.Section.Items["Content"].Instance, BackgroundTransparency = 1, Size = UDim2New(1, 0, 0, 30), BorderSizePixel = 0 })
+        Items["Text"] = Instances:Create("TextLabel", { Parent = Items["Main"].Instance, FontFace = Library.Font, TextColor3 = FromRGB(240, 240, 240), Text = Stepper.Name, Size = UDim2New(1, -100, 0, 30), BackgroundTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, TextSize = 14, ZIndex = 2 })
+        Items["Text"]:AddToTheme({TextColor3 = "Text"})
+        Items["Minus"] = Instances:Create("TextButton", { Parent = Items["Main"].Instance, FontFace = Library.Font, Text = "-", TextColor3 = FromRGB(240, 240, 240), TextSize = 18, Size = UDim2New(0, 24, 0, 24), Position = UDim2New(1, -76, 0, 3), BackgroundColor3 = Library.Theme.Accent, BackgroundTransparency = 0.85, BorderSizePixel = 0, AutoButtonColor = false, ZIndex = 2 })
+        Items["Minus"]:AddToTheme({BackgroundColor3 = "Accent"})
+        Instances:Create("UICorner", { Parent = Items["Minus"].Instance, CornerRadius = UDimNew(0, 4) })
+        Items["Value"] = Instances:Create("TextLabel", { Parent = Items["Main"].Instance, FontFace = Library.Font, TextColor3 = FromRGB(240, 240, 240), Text = tostring(Stepper.Default)..Stepper.Suffix, Size = UDim2New(0, 30, 0, 30), Position = UDim2New(1, -46, 0, 0), BackgroundTransparency = 1, TextXAlignment = Enum.TextXAlignment.Center, TextSize = 13, ZIndex = 2 })
+        Items["Value"]:AddToTheme({TextColor3 = "Text"})
+        Items["Plus"] = Instances:Create("TextButton", { Parent = Items["Main"].Instance, FontFace = Library.Font, Text = "+", TextColor3 = FromRGB(240, 240, 240), TextSize = 18, Size = UDim2New(0, 24, 0, 24), Position = UDim2New(1, -16, 0, 3), BackgroundColor3 = Library.Theme.Accent, BackgroundTransparency = 0.85, BorderSizePixel = 0, AutoButtonColor = false, ZIndex = 2 })
+        Items["Plus"]:AddToTheme({BackgroundColor3 = "Accent"})
+        Instances:Create("UICorner", { Parent = Items["Plus"].Instance, CornerRadius = UDimNew(0, 4) })
+    end
+    local function Update(Val)
+        Stepper.Value = MathClamp(Val, Stepper.Min, Stepper.Max)
+        Items["Value"].Instance.Text = tostring(Stepper.Value)..Stepper.Suffix
+        Library.Flags[Stepper.Flag] = Stepper.Value
+        Library:SafeCall(Stepper.Callback, Stepper.Value)
+    end
+    Update(Stepper.Default)
+    Items["Minus"]:Connect("MouseButton1Down", function() Update(Stepper.Value - Stepper.Step) end)
+    Items["Plus"]:Connect("MouseButton1Down", function() Update(Stepper.Value + Stepper.Step) end)
+    function Stepper:Set(Val) Update(Val) end
+    function Stepper:Get() return Stepper.Value end
+    Library.SetFlags[Stepper.Flag] = function(Val) Stepper:Set(Val) end
+    Stepper.Section.Elements[#Stepper.Section.Elements + 1] = Stepper
+    return Stepper
+end
+
+-- ==================== STATS ====================
+Library.Sections.Stats = function(self, Data)
+    Data = Data or {}
+    local StatsItem = {
+        Window = self.Window, Page = self.Page, Section = self,
+        Title = Data.Title or "Stats", Items = {}
+    }
+    local Items = {} do
+        Items["Container"] = Instances:Create("Frame", { Parent = StatsItem.Section.Items["Content"].Instance, BackgroundTransparency = 1, Size = UDim2New(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BorderSizePixel = 0 })
+        Items["Title"] = Instances:Create("TextLabel", { Parent = Items["Container"].Instance, FontFace = Library.Font, TextColor3 = FromRGB(240, 240, 240), TextTransparency = 0.3, Text = StatsItem.Title, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2New(0, 0, 0, 15), BackgroundTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, TextSize = 14, ZIndex = 2 })
+        Items["Title"]:AddToTheme({TextColor3 = "Text"})
+        Items["List"] = Instances:Create("Frame", { Parent = Items["Container"].Instance, Size = UDim2New(1, 0, 0, 0), Position = UDim2New(0, 0, 0, 22), BackgroundTransparency = 1, AutomaticSize = Enum.AutomaticSize.Y, BorderSizePixel = 0, ZIndex = 2 })
+        Instances:Create("UIListLayout", { Parent = Items["List"].Instance, Padding = UDimNew(0, 6), SortOrder = Enum.SortOrder.LayoutOrder })
+    end
+    if Data.Items then
+        for _, Item in pairs(Data.Items) do
+            local Row = Instances:Create("Frame", { Parent = Items["List"].Instance, BackgroundTransparency = 1, Size = UDim2New(1, 0, 0, 20), BorderSizePixel = 0 })
+            local Key = Instances:Create("TextLabel", { Parent = Row.Instance, FontFace = Library.Font, TextColor3 = FromRGB(240, 240, 240), TextTransparency = 0.3, Text = Item.Key or "", Size = UDim2New(0, 100, 1, 0), BackgroundTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, TextSize = 13, ZIndex = 3 })
+            Key:AddToTheme({TextColor3 = "Text"})
+            local Val = Instances:Create("TextLabel", { Parent = Row.Instance, FontFace = Library.Font, TextColor3 = FromRGB(240, 240, 240), Text = Item.Value or "", Size = UDim2New(1, -110, 1, 0), Position = UDim2New(0, 105, 0, 0), BackgroundTransparency = 1, TextXAlignment = Enum.TextXAlignment.Right, TextSize = 13, ZIndex = 3 })
+            Val:AddToTheme({TextColor3 = "Accent"})
+            StatsItem.Items[Item.Key] = {Key = Key, Value = Val}
+        end
+    end
+    function StatsItem:Update(Key, Value)
+        if StatsItem.Items[Key] then
+            StatsItem.Items[Key].Value.Instance.Text = tostring(Value)
+        end
+    end
+    function StatsItem:Get(Key)
+        return StatsItem.Items[Key] and StatsItem.Items[Key].Value.Instance.Text
+    end
+    StatsItem.Section.Elements[#StatsItem.Section.Elements + 1] = StatsItem
+    return StatsItem
+end
+
+-- ==================== GROUP ====================
+Library.Sections.Group = function(self, Data)
+    Data = Data or {}
+    local GroupItem = {
+        Window = self.Window, Page = self.Page, Section = self,
+        Buttons = {}
+    }
+    local Items = {} do
+        Items["Container"] = Instances:Create("Frame", { Parent = GroupItem.Section.Items["Content"].Instance, BackgroundTransparency = 1, Size = UDim2New(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BorderSizePixel = 0 })
+        Items["List"] = Instances:Create("Frame", { Parent = Items["Container"].Instance, BackgroundTransparency = 1, Size = UDim2New(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BorderSizePixel = 0, ZIndex = 2 })
+        Instances:Create("UIListLayout", { Parent = Items["List"].Instance, Padding = UDimNew(0, 6), SortOrder = Enum.SortOrder.LayoutOrder })
+    end
+    function GroupItem:Button(Data)
+        local Btn = Instances:Create("TextButton", { Parent = Items["List"].Instance, FontFace = Library.Font, Text = Data.Title or "", TextColor3 = FromRGB(240, 240, 240), TextSize = 13, Size = UDim2New(1, 0, 0, 28), BackgroundColor3 = Library.Theme.Accent, BackgroundTransparency = 0.85, BorderSizePixel = 0, AutoButtonColor = false, ZIndex = 3 })
+        Btn:AddToTheme({BackgroundColor3 = "Accent"})
+        Instances:Create("UICorner", { Parent = Btn.Instance, CornerRadius = UDimNew(0, 4) })
+        Btn:OnHover(function() Btn:Tween(nil, {BackgroundTransparency = 0.7}) end)
+        Btn:OnHoverLeave(function() Btn:Tween(nil, {BackgroundTransparency = 0.85}) end)
+        Btn:Connect("MouseButton1Down", function() Library:SafeCall(Data.Callback) end)
+        GroupItem.Buttons[#GroupItem.Buttons + 1] = Btn
+        return Btn
+    end
+    GroupItem.Section.Elements[#GroupItem.Section.Elements + 1] = GroupItem
+    return GroupItem
+end
+
+-- ==================== PARAGRAPH ====================
+Library.Sections.Paragraph = function(self, Data)
+    Data = Data or {}
+    local ParaItem = {
+        Window = self.Window, Page = self.Page, Section = self,
+        Title = Data.Title or "", Desc = Data.Desc or ""
+    }
+    local Items = {} do
+        Items["Container"] = Instances:Create("Frame", { Parent = ParaItem.Section.Items["Content"].Instance, BackgroundTransparency = 1, Size = UDim2New(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BorderSizePixel = 0 })
+        Items["Title"] = Instances:Create("TextLabel", { Parent = Items["Container"].Instance, FontFace = Library.Font, TextColor3 = FromRGB(240, 240, 240), Text = ParaItem.Title, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2New(0, 0, 0, 15), BackgroundTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, TextSize = 14, ZIndex = 2 })
+        Items["Title"]:AddToTheme({TextColor3 = "Text"})
+        Items["Desc"] = Instances:Create("TextLabel", { Parent = Items["Container"].Instance, FontFace = Library.Font, TextColor3 = FromRGB(180, 180, 180), Text = ParaItem.Desc, Size = UDim2New(1, 0, 0, 0), Position = UDim2New(0, 0, 0, 22), BackgroundTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, TextSize = 12, TextWrapped = true, AutomaticSize = Enum.AutomaticSize.Y, ZIndex = 2 })
+        Items["Desc"]:AddToTheme({TextColor3 = "Text"})
+    end
+    if Data.Buttons then
+        for _, BtnData in pairs(Data.Buttons) do
+            local Btn = Instances:Create("TextButton", { Parent = Items["Container"].Instance, FontFace = Library.Font, Text = BtnData.Title or "", TextColor3 = FromRGB(240, 240, 240), TextSize = 12, Size = UDim2New(0, 0, 0, 22), Position = UDim2New(0, 0, 0, 0), AnchorPoint = Vector2New(0, 0), BackgroundColor3 = Library.Theme.Accent, BackgroundTransparency = 0.85, BorderSizePixel = 0, AutoButtonColor = false, AutomaticSize = Enum.AutomaticSize.X, ZIndex = 3 })
+            Btn:AddToTheme({BackgroundColor3 = "Accent"})
+            Instances:Create("UICorner", { Parent = Btn.Instance, CornerRadius = UDimNew(0, 4) })
+            Instances:Create("UIPadding", { Parent = Btn.Instance, PaddingLeft = UDimNew(0, 8), PaddingRight = UDimNew(0, 8) })
+            Btn:OnHover(function() Btn:Tween(nil, {BackgroundTransparency = 0.7}) end)
+            Btn:OnHoverLeave(function() Btn:Tween(nil, {BackgroundTransparency = 0.85}) end)
+            Btn:Connect("MouseButton1Down", function() Library:SafeCall(BtnData.Callback) end)
+            if #Data.Buttons > 1 then Btn.Instance.Position = UDim2New(0, (#Data.Buttons == 2 and 75 or 0), 0, 0) end
+        end
+    end
+    ParaItem.Section.Elements[#ParaItem.Section.Elements + 1] = ParaItem
+    return ParaItem
+end
+
+-- ==================== PROGRESS ====================
+Library.Sections.Progress = function(self, Data)
+    Data = Data or {}
+    local ProgItem = {
+        Window = self.Window, Page = self.Page, Section = self,
+        Title = Data.Title or "Progress", Min = (Data.Value and Data.Value.Min) or 0,
+        Max = (Data.Value and Data.Value.Max) or 100, Default = (Data.Value and Data.Value.Default) or 0,
+        Suffix = Data.Suffix or "", ShowValue = Data.ShowValue or false, Value = nil
+    }
+    local Items = {} do
+        Items["Main"] = Instances:Create("Frame", { Parent = ProgItem.Section.Items["Content"].Instance, BackgroundTransparency = 1, Size = UDim2New(1, 0, 0, 35), BorderSizePixel = 0 })
+        Items["Text"] = Instances:Create("TextLabel", { Parent = Items["Main"].Instance, FontFace = Library.Font, TextColor3 = FromRGB(240, 240, 240), Text = ProgItem.Title, Size = UDim2New(1, 0, 0, 15), BackgroundTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, TextSize = 14, ZIndex = 2 })
+        Items["Text"]:AddToTheme({TextColor3 = "Text"})
+        Items["BarBG"] = Instances:Create("Frame", { Parent = Items["Main"].Instance, Size = UDim2New(1, 0, 0, 6), Position = UDim2New(0, 0, 0, 20), BackgroundColor3 = FromRGB(40, 40, 50), BorderSizePixel = 0, ZIndex = 2 })
+        Instances:Create("UICorner", { Parent = Items["BarBG"].Instance, CornerRadius = UDimNew(1, 0) })
+        Items["BarFill"] = Instances:Create("Frame", { Parent = Items["BarBG"].Instance, Size = UDim2New(0, 0, 1, 0), BackgroundColor3 = Library.Theme.Accent, BorderSizePixel = 0, ZIndex = 3 })
+        Instances:Create("UICorner", { Parent = Items["BarFill"].Instance, CornerRadius = UDimNew(1, 0) })
+        if ProgItem.ShowValue then
+            Items["Value"] = Instances:Create("TextLabel", { Parent = Items["Main"].Instance, FontFace = Library.Font, TextColor3 = FromRGB(240, 240, 240), Text = "0"..ProgItem.Suffix, Size = UDim2New(1, 0, 0, 14), Position = UDim2New(0, 0, 0, 28), BackgroundTransparency = 1, TextXAlignment = Enum.TextXAlignment.Center, TextSize = 11, ZIndex = 2 })
+            Items["Value"]:AddToTheme({TextColor3 = "Accent"})
+        end
+    end
+    local function Update(Val)
+        ProgItem.Value = MathClamp(Val, ProgItem.Min, ProgItem.Max)
+        local Pct = (ProgItem.Value - ProgItem.Min) / (ProgItem.Max - ProgItem.Min)
+        Items["BarFill"]:Tween(nil, {Size = UDim2New(Pct, 0, 1, 0)})
+        if Items["Value"] then Items["Value"].Instance.Text = math.floor(ProgItem.Value)..ProgItem.Suffix end
+    end
+    Update(ProgItem.Default)
+    function ProgItem:Set(Val) Update(Val) end
+    function ProgItem:Get() return ProgItem.Value end
+    ProgItem.Section.Elements[#ProgItem.Section.Elements + 1] = ProgItem
+    return ProgItem
+  end
 end
 
 getgenv().Library = Library

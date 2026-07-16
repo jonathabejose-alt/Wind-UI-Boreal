@@ -4,6 +4,7 @@
 
 This fork preserves full compatibility with the original API and overall structure while introducing refinements, fixes, and visual improvements.
 
+[![WindUI Shiny](https://uibin.orqan.xyz/api/card?id=73794355-a85f-498e-a218-2e31ead2b8a1&theme=orange)](https://uibin.orqan.xyz/library/73794355-a85f-498e-a218-2e31ead2b8a1)
 
 ## Credits
 
@@ -20,7 +21,7 @@ Full credit for the base framework, architecture, and core systems belongs to th
 ## Loader
 
 ```lua
-local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/jonathabejose-alt/Wind-UI-Boreal/refs/heads/main/WindUI%20Boreal"))()
+local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/jonathabejose-alt/Wind-UI-Boreal/refs/heads/main/WindUI-Shiny.lua"))()
 ```
 
 ## Base Setup
@@ -28,7 +29,7 @@ local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/jonath
 All examples below assume this base setup:
 
 ```lua
-local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/jonathabejose-alt/Wind-UI-Boreal/refs/heads/main/WindUI%20Boreal"))()
+local WindUI = loadstring(game:HttpGet(["https://raw.githubusercontent.com/jonathabejose-alt/Wind-UI-Boreal/refs/heads/main/WindUI-Shiny.lua"))()
 
 local Window = WindUI:CreateWindow({
     Title = "WindUI Docs Demo",

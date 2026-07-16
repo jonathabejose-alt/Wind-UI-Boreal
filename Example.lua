@@ -1,5 +1,5 @@
 
-local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/jonathabejose-alt/Wind-UI-Boreal/refs/heads/main/WindUI%20Boreal"))()
+local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/jonathabejose-alt/Wind-UI-Boreal/refs/heads/main/WindUI-Shiny.lua"))()
 
 local Window = WindUI:CreateWindow({
     Title = "WindUI Boreal",
